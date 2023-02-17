@@ -34,7 +34,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="35"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="300"/>
+            <RowDefinition Height="250"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -68,7 +68,7 @@
                 </Button>
             </StackPanel>
         </Grid>
-
+        
         <Grid Name="mediaInputWindow" Grid.Row="1" Grid.Column="0" Visibility="Hidden">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
@@ -468,7 +468,7 @@
                             </Button>
                             <Slider Name="ZoomSlider" Grid.Column="4" Background="Transparent" 
                                     Width="100" Foreground="#FFFFFF" Margin="0 5 0 0" 
-                                    BorderThickness="0" Maximum="100" LargeChange="10" SmallChange="5" Minimum="10" ValueChanged="ZoomSliderChanged" Value="100" />
+                                    BorderThickness="0" Maximum="100" LargeChange="10" SmallChange="5" Minimum="5" ValueChanged="ZoomSliderChanged" Value="5" />
                             <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Click="ZoomIn">
                                 <StackPanel>
                                     <Image Source="{svgc:SvgImage Source=/Resources/zoomin.svg}" Width="15" />
@@ -488,19 +488,23 @@
                         </Grid.ColumnDefinitions>
                         <ScrollViewer Name="TimeScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
                             <StackPanel Name="TimeStack"  Grid.Row="0" Orientation="Horizontal">
+                                <Label Name="TimeStart" Foreground="White" Width="120">00:00 00:00</Label>
+                                <Label Name="TimeEnd" Foreground="White" Width="120" HorizontalContentAlignment="Right" Margin="800,0,0,0">00:00 00:00</Label>
                             </StackPanel>
                         </ScrollViewer>
                         <StackPanel Grid.Row="1" Orientation="Vertical">
                             <ScrollViewer Name="ClipScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden">
                                 <StackPanel Name="ClipStack" Grid.Row="0" Orientation="Horizontal" PreviewMouseWheel="ClipMouseWheel"/>
                             </ScrollViewer>
-                            <Image Height="100" Source="Resources/editor_timeline_sound.png"></Image>
+                            <Image Height="50" Source="Resources/editor_timeline_sound.png"></Image>
                         </StackPanel>
                         <Canvas Grid.Row="1">
-                            <Button Width="20" Height="30" Canvas.Left="5" Canvas.Top="5">
+                            <Label Name="CutLabel" Foreground="White" Width="100" Margin="-50,100,0,0" HorizontalContentAlignment="Center">00:00 00:00</Label>
+                            <Rectangle Name="CutLine" Stroke="White" Width="2" Height="100" Canvas.Left="0" Margin="-1,0,0,0"/>
+                            <Button Name="CutButton" Width="20" Height="30" Canvas.Left="-10" Canvas.Top="35" PreviewMouseDown="CutButtonDown" PreviewMouseMove="CutButtonMove" PreviewMouseUp="CutButtonUp">
                                 <Button.Template>
                                     <ControlTemplate TargetType="{x:Type Button}">
-                                        <Border CornerRadius="12" Background="#FFFFFF" BorderThickness="1">
+                                        <Border CornerRadius="5" Background="#FFFFFF" BorderThickness="2">
                                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                     </ControlTemplate>
