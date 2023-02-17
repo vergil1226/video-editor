@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net7.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FFMpegCore" Version="5.0.0" />
+    <PackageReference Include="NAudio" Version="2.1.0" />
+    <PackageReference Include="OpenCvSharp4" Version="4.7.0.20230115" />
+    <PackageReference Include="OpenCvSharp4.Extensions" Version="4.7.0.20230115" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.7.0.20230115" />
+    <PackageReference Include="OpenCvSharp4.Windows" Version="4.7.0.20230115" />
+    <PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.7.0.20230115" />
+    <PackageReference Include="SharpVectors" Version="1.8.1" />
+    <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\download_rect.svg" />
+  </ItemGroup>
+
+</Project>
