@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="Video Editor" MinHeight="600" MinWidth="600" Height="720" Width="1200" Background="#252525" WindowStyle="None" ScrollViewer.VerticalScrollBarVisibility="Disabled"
         ResizeMode="CanResizeWithGrip" AllowsTransparency="True"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen" KeyDown="FormKeyDown" PreviewKeyUp="FormKeyUp">
     <Window.Resources>
         <Style TargetType="Button">
             <Setter Property="OverridesDefaultStyle" Value="True" />
@@ -98,8 +98,7 @@
                     <Button Name="ImportVideo" Background="Transparent" Canvas.Left="96" Canvas.Top="71" Height="66" Width="108" BorderThickness="0" MouseEnter="ImportVideo_MouseEnter"
                             Click="ImportVideo_Click">
                         <StackPanel>
-                            <!-- <Image Source="Resources/download_rect.png"></Image> -->
-                            <Image Source="{svgc:SvgImage Source=/Resources/Icons/ffw.svg}" />
+                            <Image Source="Resources/download_rect.png"></Image>
                         </StackPanel>
                     </Button>
                 </Canvas>
@@ -400,7 +399,7 @@
                     </Button>
                     <Button Grid.Column="8" Background="Transparent" 
                             Foreground="#FFFFFF" Margin="0 0 0 0" 
-                            BorderThickness="0">
+                            BorderThickness="0" Click="Button_Fullscreen">
                         <StackPanel Orientation="Vertical">
                             <Image Width="16" Source="/Resources/me_fullscreen.png"></Image>
                         </StackPanel>
@@ -461,6 +460,21 @@
                                 <Image Width="16" Source="Resources/editor_tool_timeline_sound.png"/>
                             </StackPanel>
                         </Button>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Margin="720,0,0,0" Click="ZoomOut">
+                                <StackPanel>
+                                    <Image Source="{svgc:SvgImage Source=/Resources/zoomout.svg}" Width="15" />
+                                </StackPanel>
+                            </Button>
+                            <Slider Name="ZoomSlider" Grid.Column="4" Background="Transparent" 
+                                    Width="100" Foreground="#FFFFFF" Margin="0 5 0 0" 
+                                    BorderThickness="0" Maximum="100" LargeChange="10" SmallChange="5" Minimum="10" ValueChanged="ZoomSliderChanged" Value="100" />
+                            <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Click="ZoomIn">
+                                <StackPanel>
+                                    <Image Source="{svgc:SvgImage Source=/Resources/zoomin.svg}" Width="15" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
                 <Grid Grid.Row="1" Margin="30 0 30 0">
@@ -472,21 +486,14 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Row="0" Orientation="Horizontal">
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                            <Label FontSize="12px" Foreground="#FFFFFF" Width="150">00:00 00:00</Label>
-                        </StackPanel>
+                        <ScrollViewer Name="TimeScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                            <StackPanel Name="TimeStack"  Grid.Row="0" Orientation="Horizontal">
+                            </StackPanel>
+                        </ScrollViewer>
                         <StackPanel Grid.Row="1" Orientation="Vertical">
-                            <Image Height="50"  Source="Resources/editor_timeline_video.png"></Image>
+                            <ScrollViewer Name="ClipScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden">
+                                <StackPanel Name="ClipStack" Grid.Row="0" Orientation="Horizontal" PreviewMouseWheel="ClipMouseWheel"/>
+                            </ScrollViewer>
                             <Image Height="100" Source="Resources/editor_timeline_sound.png"></Image>
                         </StackPanel>
                         <Canvas Grid.Row="1">
