@@ -28,4 +28,13 @@
     <None Remove="Resources\download_rect.svg" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="OpenCvSharp.UserInterface">
+      <HintPath>C:\Users\Administrator\.nuget\packages\opencvsharp-anycpu\2.4.10.20150320\lib\net40\OpenCvSharp.UserInterface.dll</HintPath>
+    </Reference>
+    <Reference Include="WindowsFormsIntegration">
+      <HintPath>C:\Program Files (x86)\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\7.0.2\ref\net7.0\WindowsFormsIntegration.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
