@@ -85,16 +85,16 @@ namespace WpfTest
             double sec = media.Position.TotalSeconds;
             TimeSlider.Value = sec;
             if (CutButton.IsMouseCaptured) return;
-            _cutlinePosX = sec * 200.0 / _timeIntervals[(int)ZoomSlider.Value] - ClipScroll.HorizontalOffset;
+            _cutlinePosX = sec * 200.0 / _timeIntervals[(int)ZoomSlider.Value] - TimeLineScroll.HorizontalOffset;
             if (_cutlinePosX < 0 && _run)
             {
-                _cutlinePosX += ClipScroll.ActualWidth;
-                ClipScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset - ClipScroll.ActualWidth);
+                _cutlinePosX += TimeLineScroll.ActualWidth;
+                TimeLineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset - TimeLineScroll.ActualWidth);
             }
-            else if (_cutlinePosX > ClipScroll.ActualWidth && _run)
+            else if (_cutlinePosX > TimeLineScroll.ActualWidth && _run)
             {
-                _cutlinePosX-= ClipScroll.ActualWidth;
-                ClipScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset + ClipScroll.ActualWidth);
+                _cutlinePosX-= TimeLineScroll.ActualWidth;
+                TimeLineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset + TimeLineScroll.ActualWidth);
             }
             TranslateTransform _transform = new TranslateTransform(_cutlinePosX, 0);
             CutButton.RenderTransform = _transform;
@@ -145,7 +145,7 @@ namespace WpfTest
         private void InitClip()
         {
             ThumbnailControl.Width = 200.0 / _timeIntervals[(int)ZoomSlider.Value] * _capture.FrameCount / _capture.Fps;
-            LineControl.Width = ((int)(ThumbnailControl.Width / ClipScroll.ActualWidth) + 1) * ClipScroll.ActualWidth;
+            LineControl.Width = ((int)(ThumbnailControl.Width / TimeLineScroll.ActualWidth) + 1) * TimeLineScroll.ActualWidth;
             TimeScroll.Width = LineControl.Width;
             ClipStack.Width = LineControl.Width;
             int length = (int)(ThumbnailControl.Width / _clipWidth) + 1;
@@ -221,6 +221,7 @@ namespace WpfTest
         {
             mediaElement.Position = new TimeSpan(0, 0, 0, 1, 0);
             _run = false; media.Stop();
+            Play.Source = new BitmapImage(new Uri(@"/WpfTest;component/Resources/me_play.png", UriKind.Relative));
         }
 
         private void Button_Play(object sender, RoutedEventArgs e)
@@ -293,7 +294,7 @@ namespace WpfTest
         private void SetTimeLinePosition(int s)
         {
             double zoomRate = (double)_timeIntervals[(int)(ZoomSlider.Value + s)] / _timeIntervals[(int)(ZoomSlider.Value)];
-            ClipScroll.ScrollToHorizontalOffset((ClipScroll.HorizontalOffset + _cutlinePosX) * zoomRate - _cutlinePosX);
+            TimeLineScroll.ScrollToHorizontalOffset((TimeLineScroll.HorizontalOffset + _cutlinePosX) * zoomRate - _cutlinePosX);
             InitClip();
         }
 
@@ -335,8 +336,8 @@ namespace WpfTest
         private void ClipScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             if (!_mediaLoaded) return;
-            //LineScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset);
-            //TimeScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset);
+            //LineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset);
+            //TimeScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset);
         }
 
         private void CutButtonDown(object sender, MouseButtonEventArgs e)
@@ -368,7 +369,7 @@ namespace WpfTest
                 // move the user control.
                 double x = mousePosition.X - _positionInBlock.X + 12;
                 if (x < 0) x = 0;
-                if (x > ClipScroll.ActualWidth) x = ClipScroll.ActualWidth;
+                if (x > TimeLineScroll.ActualWidth) x = TimeLineScroll.ActualWidth;
                 SetCutLine(x);
             }
         }
@@ -388,7 +389,7 @@ namespace WpfTest
         private void SetCutLine(double x)
         {
             _cutlinePosX = x;
-            double sec = (x + ClipScroll.HorizontalOffset) / ThumbnailControl.Width * _duration;
+            double sec = (x + TimeLineScroll.HorizontalOffset) / ThumbnailControl.Width * _duration;
             CutButton.RenderTransform = new TranslateTransform(x, 0);
             CutLine.RenderTransform = new TranslateTransform(x, 0);
             CutLabel.RenderTransform = new TranslateTransform(x, 0);
