@@ -148,7 +148,6 @@ namespace WpfTest
             LineControl.Width = ((int)(ThumbnailControl.Width / ClipScroll.ActualWidth) + 1) * ClipScroll.ActualWidth;
             TimeScroll.Width = LineControl.Width;
             ClipStack.Width = LineControl.Width;
-            //AudioGraph.Width = LineControl.Width;
             int length = (int)(ThumbnailControl.Width / _clipWidth) + 1;
             Thumbnails.Clear();
             for (int i = 0; i < length; i++)
@@ -329,15 +328,15 @@ namespace WpfTest
             }
             else
             {
-                ClipScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset - e.Delta / 2);
+                TimeLineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset - e.Delta / 2);
             }
         }
 
         private void ClipScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             if (!_mediaLoaded) return;
-            LineScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset);
-            TimeScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset);
+            //LineScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset);
+            //TimeScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset);
         }
 
         private void CutButtonDown(object sender, MouseButtonEventArgs e)

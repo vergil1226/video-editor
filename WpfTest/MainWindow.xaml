@@ -579,6 +579,7 @@
                     </Grid>
                 </Grid>
                 <Grid Grid.Row="1" Margin="30 0 30 0">
+                    <ScrollViewer Name="TimeLineScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Visible">
                     <Grid Width="auto" Height="auto">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="30"/>
@@ -645,11 +646,12 @@
                                     </Border>
                                 </StackPanel>
                             </ScrollViewer>
-                            <Image Height="50" Source="Resources/editor_timeline_sound.png"></Image>
                         </StackPanel>
                     </Grid>
+                    </ScrollViewer>
                 </Grid>
                 <Canvas Name="CutGrid" Grid.Row="1" ClipToBounds="True" Margin="30,0">
+                    <Image Name="AudioGraph" Height="50" Width="1040" Source="Resources/editor_timeline_sound.png" Canvas.Top="100"></Image>
                     <Label Name="CutLabel" Foreground="White" Width="100" Margin="-50,160,0,0" HorizontalContentAlignment="Center">00:00 00:00</Label>
                     <Rectangle Name="CutLine" Stroke="White" Canvas.Top="0" Width="1" Height="150"/>
                     <Button Name="CutButton" Width="25" Height="30" Canvas.Left="-12" Canvas.Top="35" PreviewMouseDown="CutButtonDown" PreviewMouseMove="CutButtonMove" PreviewMouseUp="CutButtonUp">
