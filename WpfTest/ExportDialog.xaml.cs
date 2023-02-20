@@ -25,6 +25,7 @@ namespace WpfTest
     /// <summary>
     /// Interaction logic for ExportDialog.xaml
     /// </summary>
+
     public partial class ExportDialog : System.Windows.Controls.UserControl
     {
         public VideoCapture _capture;
@@ -83,6 +84,7 @@ namespace WpfTest
                 ExportingGrid.Visibility = Visibility.Hidden;
 
                 time.Stop();
+                this.Visibility = Visibility.Collapsed;
             };
         }
     }

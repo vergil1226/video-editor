@@ -28,6 +28,73 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="ScrollThumbs" TargetType="{x:Type Thumb}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Grid x:Name="Grid">
+                            <Rectangle HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="Auto" Height="Auto" Fill="Transparent" />
+                            <Border x:Name="ScrollBarRectangle" CornerRadius="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="Auto" Height="Auto"  Background="{TemplateBinding Background}" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Tag" Value="Horizontal">
+                                <Setter TargetName="ScrollBarRectangle" Property="Width" Value="Auto" />
+                                <Setter TargetName="ScrollBarRectangle" Property="Height" Value="7" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="Margin" Value="-5,0,0,0" />
+            <Setter Property="Stylus.IsFlicksEnabled" Value="false" />
+            <Setter Property="Foreground" Value="#FF8C8C8C" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid x:Name="GridRoot" Width="8" Background="{TemplateBinding Background}">
+                            <Track x:Name="PART_Track" IsDirectionReversed="true" Focusable="false">
+                                <Track.Thumb>
+                                    <Thumb x:Name="ScrollBarThumb" Background="{TemplateBinding Foreground}" Style="{StaticResource ScrollThumbs}" />
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton x:Name="PageUp" Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="false" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton x:Name="PageDown" Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="false" />
+                                </Track.DecreaseRepeatButton>
+                            </Track>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter TargetName="ScrollBarThumb" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter TargetName="GridRoot" Property="LayoutTransform">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="-90" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="PART_Track" Property="LayoutTransform">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="-90" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="Width" Value="Auto" />
+                                <Setter Property="Height" Value="8" />
+                                <Setter TargetName="ScrollBarThumb" Property="Tag" Value="Horizontal" />
+                                <Setter TargetName="PageDown" Property="Command" Value="ScrollBar.PageLeftCommand" />
+                                <Setter TargetName="PageUp" Property="Command" Value="ScrollBar.PageRightCommand" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid Name="MainGrid">
@@ -368,7 +435,7 @@
                             Foreground="#FFFFFF" Margin="0 0 0 0" 
                             BorderThickness="0" Click="Button_Play">
                         <StackPanel Orientation="Vertical">
-                            <Image Width="16" Source="/Resources/me_play.png"></Image>
+                            <Image Name="Play" Width="16" Source="/Resources/me_play.png"></Image>
                         </StackPanel>
                     </Button>
                     <Button Grid.Column="1" Background="Transparent" 
@@ -501,7 +568,7 @@
                                     </StackPanel>
                                 </Button>
                                 <Slider Name="ZoomSlider" Background="Transparent" Margin="0,7,0,0"
-                                    Width="100" Foreground="#FFFFFF" BorderThickness="0" SmallChange="1" Minimum="1" Value="1" IsEnabled="False" />
+                                    Width="100" Foreground="#FFFFFF" BorderThickness="0" SmallChange="0" Value="4" IsEnabled="False" Maximum="9" />
                                 <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Click="ZoomIn">
                                     <StackPanel>
                                         <Image Source="{svgc:SvgImage Source=/Resources/zoomin.svg}" Width="15" />
@@ -515,12 +582,27 @@
                     <Grid Width="auto" Height="auto">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="30"/>
+                            <RowDefinition Height="30"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <ScrollViewer Name="TimeScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                        <ScrollViewer Name="TimeScroll" Grid.Row="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                            <ItemsControl Name="TimeControl" ItemsSource="{Binding Times}" Margin="-100,0,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Label Foreground="#CCCCCC" Width="200" HorizontalContentAlignment="Center" Content="{Binding}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <ScrollViewer Grid.Row="1" Name="LineScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" PreviewMouseLeftButtonDown="OnTimelineDown" Cursor="ScrollWE">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>
@@ -528,15 +610,27 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <Label Grid.Row="0" Name="TimeStart" Foreground="White">00:00 00:00</Label>
-                                <Label Grid.Row="0" Name="TimeEnd" Foreground="White" HorizontalContentAlignment="Right">00:00 00:00</Label>
+                                <ItemsControl Name="LineControl" ItemsSource="{Binding Lines}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Line X1="{Binding From.X}" Y1="{Binding From.Y}"
+                                                  X2="{Binding To.X}" Y2="{Binding To.Y}"
+                                                  Stroke="#CCCCCC" StrokeThickness="1"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </Grid>
                         </ScrollViewer>
-                        <StackPanel Grid.Row="1" Orientation="Vertical">
+                        <StackPanel Grid.Row="2" Orientation="Vertical">
                             <ScrollViewer Name="ClipScroll" Height="54" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="ClipMouseWheel" ScrollChanged="ClipScrollChanged">
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel Name="ClipStack" Orientation="Horizontal">
                                     <Border BorderBrush="DarkGray" BorderThickness="2" CornerRadius="5">
-                                        <ItemsControl ItemsSource="{Binding Path=Thumbnails}">
+                                        <ItemsControl Name="ThumbnailControl" ItemsSource="{Binding Path=Thumbnails}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <StackPanel Orientation="Horizontal"/>
@@ -553,24 +647,24 @@
                             </ScrollViewer>
                             <Image Height="50" Source="Resources/editor_timeline_sound.png"></Image>
                         </StackPanel>
-                        <Canvas Name="CutGrid" Grid.Row="1">
-                            <Label Name="CutLabel" Foreground="White" Width="100" Margin="-50,100,0,0" HorizontalContentAlignment="Center">00:00 00:00</Label>
-                            <Rectangle Name="CutLine" Stroke="White" Width="2" Height="100" Canvas.Left="0" Margin="-1,0,0,0"/>
-                            <Button Name="CutButton" Width="20" Height="30" Canvas.Left="-10" Canvas.Top="35" PreviewMouseDown="CutButtonDown" PreviewMouseMove="CutButtonMove" PreviewMouseUp="CutButtonUp">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="{x:Type Button}">
-                                        <Border CornerRadius="5" Background="#FFFFFF" BorderThickness="2">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                    </ControlTemplate>
-                                </Button.Template>
-                                <StackPanel>
-                                    <Image Width="16" Source="Resources/editor_tool_timeline_cut_pos.png"></Image>
-                                </StackPanel>
-                            </Button>
-                        </Canvas>
                     </Grid>
                 </Grid>
+                <Canvas Name="CutGrid" Grid.Row="1" ClipToBounds="True" Margin="30,0">
+                    <Label Name="CutLabel" Foreground="White" Width="100" Margin="-50,160,0,0" HorizontalContentAlignment="Center">00:00 00:00</Label>
+                    <Rectangle Name="CutLine" Stroke="White" Canvas.Top="0" Width="1" Height="150"/>
+                    <Button Name="CutButton" Width="25" Height="30" Canvas.Left="-12" Canvas.Top="35" PreviewMouseDown="CutButtonDown" PreviewMouseMove="CutButtonMove" PreviewMouseUp="CutButtonUp">
+                        <Button.Template>
+                            <ControlTemplate TargetType="{x:Type Button}">
+                                <Border CornerRadius="10" Background="#FFFFFF" BorderThickness="2">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <StackPanel>
+                            <Image Width="16" Source="Resources/editor_tool_timeline_cut_pos.png"></Image>
+                        </StackPanel>
+                    </Button>
+                </Canvas>
             </Grid>
         </Grid>
 

@@ -16,6 +16,7 @@ using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 using Video_Editor;
 using static System.Net.Mime.MediaTypeNames;
@@ -25,6 +26,14 @@ namespace WpfTest
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
+
+    public class Line
+    {
+        public System.Windows.Point From { get; set; }
+
+        public System.Windows.Point To { get; set; }
+    }
+
     public partial class MainWindow : System.Windows.Window
     {
         private VideoCapture _capture;
@@ -32,11 +41,15 @@ namespace WpfTest
         DispatcherTimer _timer = new DispatcherTimer();
         BitmapImage _firstImage = new BitmapImage();
         private bool _run = false, _fullscreen = false, _altPressed = false, _mute = false, _maximize = false, _mediaLoaded = false;
-        private int _startPos, _endPos, _lineLength = 1;
-        private double _clipWidth, _cutlinePosX;
+        private double _clipWidth, _cutlinePosX, _duration;
         private System.Windows.Point _positionInBlock;
+        private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 10 };
 
         public ObservableCollection<BitmapImage> Thumbnails { get; set; }
+
+        public ObservableCollection<Line> Lines { get; private set; }
+
+        public ObservableCollection<string> Times { get; private set; }
 
         public MainWindow()
         {
@@ -52,11 +65,18 @@ namespace WpfTest
             mediaEditTimeline.Visibility = Visibility.Hidden;
 
             Thumbnails = new ObservableCollection<BitmapImage>();
+            Lines = new ObservableCollection<Line>();
+            Times = new ObservableCollection<string>();
             DataContext = this;
 
             _timer.Interval = TimeSpan.FromMilliseconds(100);
             _timer.Tick += new EventHandler(ticktock);
             _timer.Start();
+
+            for (int i = 0; i < 2000; i++)
+            {
+                Lines.Add(new Line { From = new System.Windows.Point(20 * i, 5 - (i % 5 == 0 ? 5 : 0)), To = new System.Windows.Point(20 * i, 10) });
+            };
         }
 
         void ticktock(object sender, EventArgs e)
@@ -65,15 +85,22 @@ namespace WpfTest
             double sec = media.Position.TotalSeconds;
             TimeSlider.Value = sec;
             if (CutButton.IsMouseCaptured) return;
-            double pos = sec * _capture.Fps;
-            _cutlinePosX = ClipScroll.ActualWidth * (pos - _startPos) / (_endPos - _startPos);
-            double x = _cutlinePosX < 0 ? 0 : _cutlinePosX;
-            x = x > ClipScroll.ActualWidth ? ClipScroll.ActualWidth : x;
-            TranslateTransform _transform = new TranslateTransform(x, 0);
+            _cutlinePosX = sec * 200.0 / _timeIntervals[(int)ZoomSlider.Value] - ClipScroll.HorizontalOffset;
+            if (_cutlinePosX < 0 && _run)
+            {
+                _cutlinePosX += ClipScroll.ActualWidth;
+                ClipScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset - ClipScroll.ActualWidth);
+            }
+            else if (_cutlinePosX > ClipScroll.ActualWidth && _run)
+            {
+                _cutlinePosX-= ClipScroll.ActualWidth;
+                ClipScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset + ClipScroll.ActualWidth);
+            }
+            TranslateTransform _transform = new TranslateTransform(_cutlinePosX, 0);
             CutButton.RenderTransform = _transform;
             CutLine.RenderTransform = _transform;
             CutLabel.RenderTransform = _transform;
-            CutLabel.Content = GetFormatTime((int)pos);
+            CutLabel.Content = GetFormatTime((int)sec);
         }
 
         private void ImportVideo_Click(object sender, RoutedEventArgs e)
@@ -92,7 +119,7 @@ namespace WpfTest
 
                 BgGrid.Children.Add(new ImportingModalDialog());
                 DispatcherTimer time = new DispatcherTimer();
-                time.Interval = TimeSpan.FromSeconds(2);
+                time.Interval = TimeSpan.FromMilliseconds(2000);
                 time.Start();
                 time.Tick += async delegate
                 {
@@ -105,9 +132,7 @@ namespace WpfTest
                     _mediaLoaded = true;
 
                     _clipWidth = 50 * _capture.FrameWidth / _capture.FrameHeight;
-                    _startPos = 0;
-                    _endPos = (int)(_capture.FrameCount * ClipScroll.ActualWidth / _clipWidth);
-                    TimeEnd.Content = GetFormatTime(_endPos);
+                    _duration = _capture.FrameCount / _capture.Fps;
                     await GetFrame(0, _firstImage);
                     InitClip();
 
@@ -119,17 +144,24 @@ namespace WpfTest
 
         private void InitClip()
         {
+            ThumbnailControl.Width = 200.0 / _timeIntervals[(int)ZoomSlider.Value] * _capture.FrameCount / _capture.Fps;
+            LineControl.Width = ((int)(ThumbnailControl.Width / ClipScroll.ActualWidth) + 1) * ClipScroll.ActualWidth;
+            TimeScroll.Width = LineControl.Width;
+            ClipStack.Width = LineControl.Width;
+            //AudioGraph.Width = LineControl.Width;
+            int length = (int)(ThumbnailControl.Width / _clipWidth) + 1;
             Thumbnails.Clear();
-            for (int i = 0; i < _lineLength; i++)
+            for (int i = 0; i < length; i++)
             {
                 Thumbnails.Add(_firstImage);
             }
-            SyncThumbnails();
+            SyncThumbnails(length);
+            SyncTimeLine();
         }
 
-        private void SyncThumbnails()
+        private void SyncThumbnails(int length)
         {
-            for (int i = 0; i < _lineLength; i++)
+            for (int i = 0; i < length; i++)
             {
                 DispatcherTimer time = new DispatcherTimer();
                 time.Interval = TimeSpan.FromMilliseconds(10);
@@ -143,9 +175,18 @@ namespace WpfTest
             }
         }
 
+        private void SyncTimeLine()
+        {
+            Times.Clear();
+            for (int i = 0; i < 1000; i++)
+            {
+                Times.Add(GetFormatTime(i * _timeIntervals[(int)ZoomSlider.Value]));
+            }
+        }
+
         private async Task SyncOne(int i)
         {
-            int cnt = _lineLength;
+            int cnt = (int)(ThumbnailControl.Width / _clipWidth) + 1;
             double _half = (double)_capture.FrameCount / cnt / 2;
             BitmapImage bitmapimage = new BitmapImage();
             await GetFrame((int)(i * _capture.FrameCount / cnt + _half), bitmapimage);
@@ -167,8 +208,7 @@ namespace WpfTest
 
         private string GetFormatTime(int t)
         {
-            int elapsedTime = (int)(t / _capture.Fps);
-            return "00:" + (elapsedTime / 3600).ToString("D2") + " " + (elapsedTime / 60).ToString("D2") + ":" + (elapsedTime % 60).ToString("D2");
+            return "00:" + (t / 3600).ToString("D2") + " " + (t / 60).ToString("D2") + ":" + (t % 60).ToString("D2");
         }
 
         private void OnMediaOpend(object sender, RoutedEventArgs e)
@@ -181,14 +221,22 @@ namespace WpfTest
         private void OnMediaEnded(object sender, RoutedEventArgs e)
         {
             mediaElement.Position = new TimeSpan(0, 0, 0, 1, 0);
-            _run = false;
+            _run = false; media.Stop();
         }
 
         private void Button_Play(object sender, RoutedEventArgs e)
         {
             _run = !_run;
-            if (_run) media.Play();
-            else media.Pause();
+            if (_run)
+            {
+                media.Play();
+                Play.Source = new BitmapImage(new Uri(@"/WpfTest;component/Resources/me_pause.png", UriKind.Relative));
+            }
+            else
+            {
+                media.Pause();
+                Play.Source = new BitmapImage(new Uri(@"/WpfTest;component/Resources/me_play.png", UriKind.Relative));
+            }
         }
 
         private void Button_Prev(object sender, RoutedEventArgs e)
@@ -231,8 +279,7 @@ namespace WpfTest
             double zoomRate = ZoomSlider.Value - 1;
             if (zoomRate < ZoomSlider.Minimum) zoomRate = ZoomSlider.Minimum;
             ZoomSlider.Value = zoomRate;
-            _lineLength /= 2; _endPos *= 2;
-            SetTimeLinePosition();
+            SetTimeLinePosition(1);
         }
 
         private void ZoomIn(object sender, RoutedEventArgs e)
@@ -241,14 +288,13 @@ namespace WpfTest
             double zoomRate = ZoomSlider.Value + 1;
             if (zoomRate > ZoomSlider.Maximum) zoomRate = ZoomSlider.Maximum;
             ZoomSlider.Value = zoomRate;
-            _lineLength *= 2; _endPos /= 2;
-            SetTimeLinePosition();
+            SetTimeLinePosition(-1);
         }
 
-        private void SetTimeLinePosition()
+        private void SetTimeLinePosition(int s)
         {
-            TimeStart.Content = GetFormatTime(_startPos);
-            TimeEnd.Content = GetFormatTime(_endPos);
+            double zoomRate = (double)_timeIntervals[(int)(ZoomSlider.Value + s)] / _timeIntervals[(int)(ZoomSlider.Value)];
+            ClipScroll.ScrollToHorizontalOffset((ClipScroll.HorizontalOffset + _cutlinePosX) * zoomRate - _cutlinePosX);
             InitClip();
         }
 
@@ -283,18 +329,15 @@ namespace WpfTest
             }
             else
             {
-                ClipScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset - e.Delta);
+                ClipScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset - e.Delta / 2);
             }
         }
 
         private void ClipScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             if (!_mediaLoaded) return;
-            double t = e.HorizontalChange * (_endPos - _startPos) / ClipScroll.ActualWidth;
-            _startPos += (int)t;
-            _endPos += (int)t;
-            TimeStart.Content = GetFormatTime(_startPos);
-            TimeEnd.Content = GetFormatTime(_endPos);
+            LineScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset);
+            TimeScroll.ScrollToHorizontalOffset(ClipScroll.HorizontalOffset);
         }
 
         private void CutButtonDown(object sender, MouseButtonEventArgs e)
@@ -304,7 +347,10 @@ namespace WpfTest
 
             // capture the mouse (so the mouse move events are still triggered (even when the mouse is not above the control)
             CutButton.CaptureMouse();
-            _run = false; media.Pause();
+            if (_run)
+            {
+                _run = false; media.Pause();
+            }
         }
 
         private void CutButtonMove(object sender, System.Windows.Input.MouseEventArgs e)
@@ -321,18 +367,10 @@ namespace WpfTest
                 var mousePosition = e.GetPosition(container);
 
                 // move the user control.
-                double x = mousePosition.X - _positionInBlock.X + 10;
+                double x = mousePosition.X - _positionInBlock.X + 12;
                 if (x < 0) x = 0;
                 if (x > ClipScroll.ActualWidth) x = ClipScroll.ActualWidth;
-                int pos = (int)(_startPos + (_endPos - _startPos) * x / ClipScroll.ActualWidth);
-                //if (pos > _capture.FrameCount) x = ClipScroll.ActualWidth;
-                _cutlinePosX = x;
-                CutButton.RenderTransform = new TranslateTransform(x, 0);
-                CutLine.RenderTransform = new TranslateTransform(x, 0);
-                CutLabel.RenderTransform = new TranslateTransform(x, 0);
-                CutLabel.Content = GetFormatTime(pos);
-                int mili = (int)(1000 * pos / _capture.Fps);
-                media.Position = new TimeSpan(0, 0, 0, mili / 1000, mili % 1000);
+                SetCutLine(x);
             }
         }
 
@@ -340,6 +378,24 @@ namespace WpfTest
         {
             // release this control.
             CutButton.ReleaseMouseCapture();
+        }
+
+        private void OnTimelineDown(object sender, MouseButtonEventArgs e)
+        {
+            var mousePosition =  e.GetPosition(LineScroll);
+            SetCutLine(mousePosition.X);
+        }
+
+        private void SetCutLine(double x)
+        {
+            _cutlinePosX = x;
+            double sec = (x + ClipScroll.HorizontalOffset) / ThumbnailControl.Width * _duration;
+            CutButton.RenderTransform = new TranslateTransform(x, 0);
+            CutLine.RenderTransform = new TranslateTransform(x, 0);
+            CutLabel.RenderTransform = new TranslateTransform(x, 0);
+            CutLabel.Content = GetFormatTime((int)sec);
+            int mili = (int)(1000 * sec);
+            media.Position = new TimeSpan(0, 0, 0, mili / 1000, mili % 1000);
         }
 
         private void Export_Click(object sender, RoutedEventArgs e)
