@@ -663,7 +663,9 @@
                             </ControlTemplate>
                         </Button.Template>
                         <StackPanel>
-                            <Image Width="16" Source="Resources/editor_tool_timeline_cut_pos.png"></Image>
+                            <Border BorderThickness="1" Margin="10">
+                                <local:WaveFormViewer x:Name="waveView" ClipToBounds="True"/>
+                            </Border>
                         </StackPanel>
                     </Button>
                 </Canvas>

@@ -3,11 +3,13 @@ using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.Xml;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -19,7 +21,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using Video_Editor;
-using static System.Net.Mime.MediaTypeNames;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
+using static WpfTest.Utils;
 
 namespace WpfTest
 {
@@ -44,6 +47,7 @@ namespace WpfTest
         private double _clipWidth, _cutlinePosX, _duration;
         private System.Windows.Point _positionInBlock;
         private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 10 };
+        private string _videoFile = null;
 
         public ObservableCollection<BitmapImage> Thumbnails { get; set; }
 
@@ -119,14 +123,15 @@ namespace WpfTest
 
                 BgGrid.Children.Add(new ImportingModalDialog());
                 DispatcherTimer time = new DispatcherTimer();
-                time.Interval = TimeSpan.FromMilliseconds(2000);
+                time.Interval = TimeSpan.FromMilliseconds(100);
                 time.Start();
                 time.Tick += async delegate
                 {
                     // Import the video file
-                    string _videoFile = openFileDialog.FileName;
+                    _videoFile = openFileDialog.FileName;
                     _capture = new VideoCapture(_videoFile);
                     media.Source = new Uri(_videoFile);
+                    await Task.Delay(100);
                     media.Play();
                     media.Pause();
                     _mediaLoaded = true;
@@ -139,6 +144,15 @@ namespace WpfTest
                     BgGrid.Children.Clear();
                     time.Stop();
                 };
+                /*
+                time.Interval = TimeSpan.FromMilliseconds(1000);
+                time.Start();
+                time.Tick += async delegate
+                {
+                    await ConvertLoad();
+                    time.Stop();
+                };
+                */
             }
         }
 
@@ -203,6 +217,57 @@ namespace WpfTest
             bitmapimage.StreamSource = _image.Resize(new OpenCvSharp.Size(_clipWidth, 50)).ToMemoryStream();
             bitmapimage.CacheOption = BitmapCacheOption.OnLoad;
             bitmapimage.EndInit();
+        }
+
+        private async Task ConvertLoad()
+        {
+            string wavLocation = System.IO.Path.GetDirectoryName(Environment.ProcessPath) + "\\temp";
+            while (File.Exists(wavLocation + ".wav"))
+            {
+                if (Regex.IsMatch(wavLocation, @"_\d+$"))
+                    wavLocation = Regex.Replace(wavLocation, @"_\d+$", "_" + (int.Parse(wavLocation.Split('_').Last()) + 1).ToString());
+                else
+                    wavLocation = wavLocation + "_1";
+            }
+            GC.Collect();
+
+            wavLocation = wavLocation + ".wav";
+            var exitCode = -1;
+            
+            try
+            {
+                await Task.Run(() =>
+                {
+                    var ffmpeg = new Process();
+#if false //DEBUG
+                    ffmpeg.StartInfo.FileName = "cmd.exe";
+                    ffmpeg.StartInfo.Arguments = $"/K ffmpeg.exe -y -i \"{dlg.FileName}\" -c copy -vn -acodec pcm_s16le -ar 16000 -ac 1 \"{chunkSaveLocation}.wav\"";
+                    ffmpeg.StartInfo.WindowStyle = ProcessWindowStyle.Normal;
+#else
+                    ffmpeg.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg", "ffmpeg.exe ");
+                    ffmpeg.StartInfo.Arguments = $"-y -i \"{_videoFile}\" -c copy -vn -acodec pcm_s16le -ar 16000 -ac 1 \"{wavLocation}\"";
+                    ffmpeg.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+#endif
+                    ffmpeg.StartInfo.UseShellExecute = true;
+                    ffmpeg.Start();
+                    ffmpeg.WaitForExit();
+                    exitCode = ffmpeg.ExitCode;
+                });
+
+
+                if (exitCode == 0)
+                {
+                    await waveView.SetWaveStream(wavLocation);
+                }
+                else
+                    throw new Exception($"ffmpeg.exe exited with code {exitCode}");
+            }
+            catch (TaskCanceledException) { }
+            catch (Exception ex)
+            {
+                Logger.Log($"{ex.Message}:\n{ex.StackTrace}", Logger.Type.Error);
+                System.Windows.MessageBox.Show(ex.Message, "Program Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private string GetFormatTime(int t)
