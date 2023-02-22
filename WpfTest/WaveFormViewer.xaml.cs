@@ -154,9 +154,9 @@ namespace WpfTest
         };
 
         private long waveSize = 0L;
-        private int waveFormSize = 0;
+        public int waveFormSize = 0;
         private TimeSpan waveDuration = TimeSpan.Zero;
-        private double maxSpan = 0.0;
+        public double maxSpan = 0.0;
         private double downX = 0.0;
         private double downScroll = 0.0;
         private bool modifierCtrlPressed = false;
@@ -337,9 +337,9 @@ namespace WpfTest
                 _renderingLine = true;
 
                 var curPosX = (((double)WaveStream.Position / waveSize) * WaveFormWidth) - ScrollOffset;
-                linePosTranslate.X = curPosX;
+                //linePosTranslate.X = curPosX;
 
-                txtTime.Content = $"{WaveStream.CurrentTime.ToString(@"hh\:mm\:ss\.fff")} / {WaveStream.TotalTime.ToString(@"hh\:mm\:ss\.fff")}";
+                //txtTime.Content = $"{WaveStream.CurrentTime.ToString(@"hh\:mm\:ss\.fff")} / {WaveStream.TotalTime.ToString(@"hh\:mm\:ss\.fff")}";
 
                 if (scrollToPosition || (!Keyboard.IsKeyDown(Key.LeftCtrl) && Player.PlaybackState == PlaybackState.Playing))
                 {
@@ -441,16 +441,16 @@ namespace WpfTest
         public void UpdateVisuals()
         {
             var selColor = (SolidColorBrush)Utils.BrushConverter.ConvertFromString(Settings.AudioWaveSelectionColor);
-            grdSelect.Background = selColor;
+            //grdSelect.Background = selColor;
 
             var lnColor = selColor.Color;
             lnColor.A = 255;
-            linePos.Background = new SolidColorBrush(lnColor);
+            //linePos.Background = new SolidColorBrush(lnColor);
 
             var timeBgColor = (Color)ColorConverter.ConvertFromString(Settings.AudioWaveBackgroundColor);
             timeBgColor.A = 220;
             txtTimeBG.Background = new SolidColorBrush(timeBgColor);
-            txtTime.Foreground = (SolidColorBrush)Utils.BrushConverter.ConvertFromString(Settings.AudioWaveColor);
+            //txtTime.Foreground = (SolidColorBrush)Utils.BrushConverter.ConvertFromString(Settings.AudioWaveColor);
 
             drawWave = true;
             Render();
@@ -462,15 +462,15 @@ namespace WpfTest
             var selectionEnd = Math.Min(ActualWidth, (((double)SelectionEnd / waveSize) * WaveFormWidth) - ScrollOffset);
             if (selectionEnd - selectionStart > 0)
             {
-                grdSelect.Margin = new Thickness(selectionStart, 0, 0, 0);
-                grdSelect.Width = selectionEnd - selectionStart;
+                //grdSelect.Margin = new Thickness(selectionStart, 0, 0, 0);
+                //grdSelect.Width = selectionEnd - selectionStart;
                 if (!fromRender && !(adjustingStart || adjustingEnd))
                     Pause();
             }
             else
             {
-                grdSelect.Margin = new Thickness(0);
-                grdSelect.Width = 0;
+                //grdSelect.Margin = new Thickness(0);
+                //grdSelect.Width = 0;
             }
         }
 

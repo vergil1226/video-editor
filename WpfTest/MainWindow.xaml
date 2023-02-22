@@ -533,14 +533,14 @@
                             </Button>
                         </Grid>
                         <Grid Grid.Column="2">
-                            <Button Width="30" Height="30" Background="Transparent" BorderThickness="0">
+                            <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Click="OnDeleteClip">
                                 <StackPanel>
                                     <Image Width="16" Source="Resources/editor_tool_timeline_del.png"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
                         <Grid Grid.Column="3">
-                            <Button Width="30" Height="30" Background="Transparent" BorderThickness="0">
+                            <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Click="OnCutButtonClick">
                                 <StackPanel>
                                     <Image Width="16" Source="Resources/editor_tool_timeline_cut.png"/>
                                 </StackPanel>
@@ -579,81 +579,72 @@
                     </Grid>
                 </Grid>
                 <Grid Grid.Row="1" Margin="30 0 30 0">
-                    <ScrollViewer Name="TimeLineScroll" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Visible">
-                    <Grid Width="auto" Height="auto">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="30"/>
-                            <RowDefinition Height="30"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <ScrollViewer Name="TimeScroll" Grid.Row="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
-                            <ItemsControl Name="TimeControl" ItemsSource="{Binding Times}" Margin="-100,0,0,0">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Label Foreground="#CCCCCC" Width="200" HorizontalContentAlignment="Center" Content="{Binding}"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                        <ScrollViewer Grid.Row="1" Name="LineScroll" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" PreviewMouseLeftButtonDown="OnTimelineDown" Cursor="ScrollWE">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <ItemsControl Name="LineControl" ItemsSource="{Binding Lines}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <ScrollViewer Name="TimeLineScroll" Grid.Row="0" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Visible" ScrollChanged="OnTimeLineScrollChanged">
+                        <Grid Width="auto" Height="auto">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="30"/>
+                                <RowDefinition Height="60"/>
+                                <RowDefinition Height="50"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ScrollViewer Name="TimeScroll" Grid.Row="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                                <ItemsControl Name="TimeControl" ItemsSource="{Binding Times}" Margin="-100,0,0,0">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <Canvas />
+                                            <StackPanel Orientation="Horizontal"/>
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Line X1="{Binding From.X}" Y1="{Binding From.Y}"
-                                                  X2="{Binding To.X}" Y2="{Binding To.Y}"
-                                                  Stroke="#CCCCCC" StrokeThickness="1"/>
+                                            <Label Foreground="#CCCCCC" Width="200" HorizontalContentAlignment="Center" Content="{Binding}"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                            </Grid>
-                        </ScrollViewer>
-                        <StackPanel Grid.Row="2" Orientation="Vertical">
-                            <ScrollViewer Name="ClipScroll" Height="54" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="ClipMouseWheel" ScrollChanged="ClipScrollChanged">
-                                <StackPanel Name="ClipStack" Orientation="Horizontal">
-                                    <Border BorderBrush="DarkGray" BorderThickness="2" CornerRadius="5">
-                                        <ItemsControl Name="ThumbnailControl" ItemsSource="{Binding Path=Thumbnails}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate DataType="BitmapImage">
-                                                    <Image Source="{Binding}" Height="50" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Border>
-                                </StackPanel>
                             </ScrollViewer>
-                        </StackPanel>
-                    </Grid>
+                            <ScrollViewer Name="LineScroll" Grid.Row="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" PreviewMouseLeftButtonDown="OnTimelineDown" Cursor="ScrollWE">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <ItemsControl Name="LineControl" ItemsSource="{Binding Lines}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <Canvas />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Line X1="{Binding From.X}" Y1="{Binding From.Y}"
+                                                      X2="{Binding To.X}" Y2="{Binding To.Y}"
+                                                      Stroke="#CCCCCC" StrokeThickness="1"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </ScrollViewer>
+                            <StackPanel Grid.Row="2" Orientation="Vertical">
+                                <ScrollViewer Name="ClipScroll" Height="54" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="ClipMouseWheel">
+                                    <StackPanel Name="ClipStack" Orientation="Horizontal" HorizontalAlignment="Left" PreviewMouseLeftButtonDown="OnClipMouseDown" />
+                                </ScrollViewer>
+                            </StackPanel>
+                            <!-- <local:WaveFormViewer Grid.Row="3" x:Name="waveView" HorizontalAlignment="Left" ClipToBounds="True" Height="50" Visibility="Visible"/> -->
+                            <StackPanel Name="WaveStack" Grid.Row="3" Orientation="Horizontal">
+                            </StackPanel>
+                        </Grid>
                     </ScrollViewer>
                 </Grid>
                 <Canvas Name="CutGrid" Grid.Row="1" ClipToBounds="True" Margin="30,0">
-                    <Image Name="AudioGraph" Height="50" Width="1040" Source="Resources/editor_timeline_sound.png" Canvas.Top="100"></Image>
                     <Label Name="CutLabel" Foreground="White" Width="100" Margin="-50,160,0,0" HorizontalContentAlignment="Center">00:00 00:00</Label>
-                    <Rectangle Name="CutLine" Stroke="White" Canvas.Top="0" Width="1" Height="150"/>
+                    <Rectangle Name="CutLine" Stroke="White" Canvas.Top="0" Width="1" Height="165"/>
                     <Button Name="CutButton" Width="25" Height="30" Canvas.Left="-12" Canvas.Top="35" PreviewMouseDown="CutButtonDown" PreviewMouseMove="CutButtonMove" PreviewMouseUp="CutButtonUp">
                         <Button.Template>
                             <ControlTemplate TargetType="{x:Type Button}">
@@ -663,11 +654,10 @@
                             </ControlTemplate>
                         </Button.Template>
                         <StackPanel>
-                            <Border BorderThickness="1" Margin="10">
-                                <local:WaveFormViewer x:Name="waveView" ClipToBounds="True"/>
-                            </Border>
+                            <Image Width="16" Source="Resources/editor_tool_timeline_cut_pos.png"></Image>
                         </StackPanel>
                     </Button>
+                    <Border x:Name="SelectedBorder" BorderThickness="2" CornerRadius="10" BorderBrush="White" Visibility="Hidden"/>
                 </Canvas>
             </Grid>
         </Grid>

@@ -1,14 +1,18 @@
 ﻿using Microsoft.Win32;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
+using SharpVectors.Dom.Svg;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.Xml;
+using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,7 +53,8 @@ namespace WpfTest
         private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 10 };
         private string _videoFile = null;
 
-        public ObservableCollection<BitmapImage> Thumbnails { get; set; }
+        public ObservableCollection<VideoClipControl> VideoClips { get; set; }
+        public ObservableCollection<AudioClipControl> AudioClips { get; set; }
 
         public ObservableCollection<Line> Lines { get; private set; }
 
@@ -68,12 +73,13 @@ namespace WpfTest
             mediaInputTimeline.Visibility = Visibility.Hidden;
             mediaEditTimeline.Visibility = Visibility.Hidden;
 
-            Thumbnails = new ObservableCollection<BitmapImage>();
+            VideoClips = new ObservableCollection<VideoClipControl>();
+            AudioClips= new ObservableCollection<AudioClipControl>();
             Lines = new ObservableCollection<Line>();
             Times = new ObservableCollection<string>();
             DataContext = this;
 
-            _timer.Interval = TimeSpan.FromMilliseconds(100);
+            _timer.Interval = TimeSpan.FromMilliseconds(50);
             _timer.Tick += new EventHandler(ticktock);
             _timer.Start();
 
@@ -127,6 +133,7 @@ namespace WpfTest
                 time.Start();
                 time.Tick += async delegate
                 {
+                    time.Stop();
                     // Import the video file
                     _videoFile = openFileDialog.FileName;
                     _capture = new VideoCapture(_videoFile);
@@ -138,54 +145,27 @@ namespace WpfTest
 
                     _clipWidth = 50 * _capture.FrameWidth / _capture.FrameHeight;
                     _duration = _capture.FrameCount / _capture.Fps;
-                    await GetFrame(0, _firstImage);
-                    InitClip();
+                    GetFrame(0, _firstImage);
+                    VideoClipControl clip = new VideoClipControl(_capture, _firstImage, 0, _duration, _clipWidth, _timeIntervals[(int)ZoomSlider.Value]);
+                    VideoClips.Add(clip);
+                    ClipStack.Children.Add(clip);
+                    InitWidth();
 
-                    BgGrid.Children.Clear();
-                    time.Stop();
-                };
-                /*
-                time.Interval = TimeSpan.FromMilliseconds(1000);
-                time.Start();
-                time.Tick += async delegate
-                {
                     await ConvertLoad();
-                    time.Stop();
+                    BgGrid.Children.Clear();
                 };
-                */
             }
         }
 
-        private void InitClip()
+        private void InitWidth()
         {
-            ThumbnailControl.Width = 200.0 / _timeIntervals[(int)ZoomSlider.Value] * _capture.FrameCount / _capture.Fps;
-            LineControl.Width = ((int)(ThumbnailControl.Width / TimeLineScroll.ActualWidth) + 1) * TimeLineScroll.ActualWidth;
+            double _width = 200.0 / _timeIntervals[(int)ZoomSlider.Value] * _capture.FrameCount / _capture.Fps;
+            LineControl.Width = ((int)(_width / TimeLineScroll.ActualWidth) + 1) * TimeLineScroll.ActualWidth;
+            ClipScroll.Width = LineScroll.Width;
             TimeScroll.Width = LineControl.Width;
-            ClipStack.Width = LineControl.Width;
-            int length = (int)(ThumbnailControl.Width / _clipWidth) + 1;
-            Thumbnails.Clear();
-            for (int i = 0; i < length; i++)
-            {
-                Thumbnails.Add(_firstImage);
-            }
-            SyncThumbnails(length);
+            //WaveStack.Width = _width;
             SyncTimeLine();
-        }
-
-        private void SyncThumbnails(int length)
-        {
-            for (int i = 0; i < length; i++)
-            {
-                DispatcherTimer time = new DispatcherTimer();
-                time.Interval = TimeSpan.FromMilliseconds(10);
-                time.Start();
-                int j = i;
-                time.Tick += async delegate
-                {
-                    await SyncOne(j);
-                    time.Stop();
-                };
-            }
+            ticktock(null, null);
         }
 
         private void SyncTimeLine()
@@ -195,16 +175,6 @@ namespace WpfTest
             {
                 Times.Add(GetFormatTime(i * _timeIntervals[(int)ZoomSlider.Value]));
             }
-        }
-
-        private async Task SyncOne(int i)
-        {
-            int cnt = (int)(ThumbnailControl.Width / _clipWidth) + 1;
-            double _half = (double)_capture.FrameCount / cnt / 2;
-            BitmapImage bitmapimage = new BitmapImage();
-            await GetFrame((int)(i * _capture.FrameCount / cnt + _half), bitmapimage);
-            if (i >= Thumbnails.Count) return;
-            Thumbnails[i] = bitmapimage;
         }
 
         private async Task GetFrame(int pos, BitmapImage bitmapimage)
@@ -257,7 +227,7 @@ namespace WpfTest
 
                 if (exitCode == 0)
                 {
-                    await waveView.SetWaveStream(wavLocation);
+                    await SetWaveStream(wavLocation);
                 }
                 else
                     throw new Exception($"ffmpeg.exe exited with code {exitCode}");
@@ -268,6 +238,145 @@ namespace WpfTest
                 Logger.Log($"{ex.Message}:\n{ex.StackTrace}", Logger.Type.Error);
                 System.Windows.MessageBox.Show(ex.Message, "Program Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        public WaveStream WaveStream { get; private set; }
+        public List<float> WaveFormData { get; private set; }
+
+        public double MaxZoom { get; private set; } = 1.0;
+        public double MinZoom { get; private set; } = 1.0;
+
+        private long waveSize = 0L;
+        private int waveFormSize = 0;
+        private TimeSpan waveDuration = TimeSpan.Zero;
+        private double maxSpan = 0.0;
+        private double downX = 0.0;
+        private double downScroll = 0.0;
+        private bool modifierCtrlPressed = false;
+        private bool modifierShiftPressed = false;
+        private bool drawWave = false;
+
+        public async Task<bool> SetWaveStream(string fileName)
+        {
+            await Task.Yield();
+
+            WaveStream = null;
+            WaveFormData = null;
+            waveSize = 0L;
+            waveFormSize = 0;
+            waveDuration = TimeSpan.Zero;
+            //UpdateVisuals();
+
+            try
+            {
+                var waveStream = new WaveFileReader(fileName);
+                if (waveStream.WaveFormat.Channels != 1 || waveStream.WaveFormat.SampleRate != 16000)
+                {
+                    throw new FileFormatException("Input should be 16kHz Mono WAV file.");
+                }
+                var wave = new WaveChannel32(waveStream);
+
+                if (wave == null)
+                    return false;
+
+                waveStream.Position = 0L;
+                waveDuration = waveStream.TotalTime;
+
+                int sampleSize = 0;
+
+                sampleSize = (from i in Utils.Range(1, 512)
+                              let align = wave.WaveFormat.BlockAlign * (double)i
+                              let v = wave.Length / align
+                              where v == (int)v
+                              select (int)align).Max();
+
+                var bufferSize = (int)(wave.Length / (double)sampleSize);
+                int read = 0;
+
+                //this.waveSize = waveStream.Length;
+                waveSize = waveStream.Length;
+
+                //ScrollOffset = 0.0;
+                MaxZoom = Math.Max(wave.TotalTime.TotalSeconds / 4, MinZoom);
+                //Zoom = MinZoom;
+                //SelectionStart = 0;
+                //SelectionEnd = 0;
+
+                var maxWidth = Math.Min(WpfScreen.AllScreens().OrderByDescending(s => s.WorkingArea.Width).First().WorkingArea.Width * MaxZoom, waveSize);
+
+                var iter = 0;
+                var waveFormData = new float[(int)(maxWidth * 2)];
+
+                await Task.Run(() =>
+                {
+                    while (wave.Position < wave.Length)
+                    {
+                        var rwaIndex = 0;
+                        var rawWaveArray = new float[bufferSize / 4];
+
+                        var buffer = new byte[bufferSize];
+                        read = wave.Read(buffer, 0, bufferSize);
+
+                        for (int i = 0; i < read / 4; i++)
+                        {
+                            var point = BitConverter.ToSingle(buffer, i * 4);
+                            rawWaveArray[rwaIndex++] = point;
+                        }
+                        buffer = null;
+
+                        var wl = rawWaveArray.ToList();
+                        var rwaCount = rawWaveArray.Length;
+
+                        var samplesPerPixel = (rwaCount / (maxWidth / sampleSize));
+
+                        var writeOffset = (int)((maxWidth / sampleSize) * iter);
+                        for (int i = 0; i < (int)(maxWidth / sampleSize); i++)
+                        {
+                            var offset = (int)(samplesPerPixel * i);
+                            var drawableSample = wl.GetRange(offset, Math.Min((int)samplesPerPixel, read)).ToArray();
+                            waveFormData[(i + writeOffset) * 2] = drawableSample.Max();
+                            waveFormData[((i + writeOffset) * 2) + 1] = drawableSample.Min();
+                            drawableSample = null;
+                        }
+
+                        wl.Clear();
+                        wl = null;
+                        iter++;
+                    }
+                });
+
+                maxSpan = waveFormData.Max() - waveFormData.Min();
+                //Player.Init(waveStream);
+                waveStream.Position = 0L;
+                WaveStream = waveStream;
+                WaveFormData = waveFormData.ToList();
+                waveFormSize = waveFormData.Length;
+                //PlayRangeEnd = WaveStream.TotalTime;
+                var clip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, ClipStack.ActualWidth, 0, _duration, _duration);
+                WaveStack.Children.Add(clip);
+                AudioClips.Add(clip);
+            }
+            catch (TaskCanceledException) { }
+            catch (Exception ex)
+            {
+                WaveStream = null;
+                WaveFormData = null;
+                waveSize = 0L;
+                waveFormSize = 0;
+                waveDuration = TimeSpan.Zero;
+                Logger.Log($"{ex.Message}:\n{ex.StackTrace}", Logger.Type.Error);
+                System.Windows.MessageBox.Show(ex.Message, "Program Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+            GC.Collect();
+
+            drawWave = true;
+            //Render();
+
+            var success = (WaveStream != null);
+            //btnPlayPause.IsEnabled = success;
+
+            return success;
         }
 
         private string GetFormatTime(int t)
@@ -287,6 +396,7 @@ namespace WpfTest
             mediaElement.Position = new TimeSpan(0, 0, 0, 1, 0);
             _run = false; media.Stop();
             Play.Source = new BitmapImage(new Uri(@"/WpfTest;component/Resources/me_play.png", UriKind.Relative));
+            TimeLineScroll.ScrollToHome();
         }
 
         private void Button_Play(object sender, RoutedEventArgs e)
@@ -360,7 +470,13 @@ namespace WpfTest
         {
             double zoomRate = (double)_timeIntervals[(int)(ZoomSlider.Value + s)] / _timeIntervals[(int)(ZoomSlider.Value)];
             TimeLineScroll.ScrollToHorizontalOffset((TimeLineScroll.HorizontalOffset + _cutlinePosX) * zoomRate - _cutlinePosX);
-            InitClip();
+            InitWidth();
+
+            for (int i = 0; i < VideoClips.Count; i++)
+            {
+                AudioClips[i].UpdateWidth(zoomRate);
+                VideoClips[i].SetTimeInterval(_timeIntervals[(int)(ZoomSlider.Value)]);
+            }
         }
 
         private void FormKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -396,13 +512,6 @@ namespace WpfTest
             {
                 TimeLineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset - e.Delta / 2);
             }
-        }
-
-        private void ClipScrollChanged(object sender, ScrollChangedEventArgs e)
-        {
-            if (!_mediaLoaded) return;
-            //LineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset);
-            //TimeScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset);
         }
 
         private void CutButtonDown(object sender, MouseButtonEventArgs e)
@@ -448,13 +557,95 @@ namespace WpfTest
         private void OnTimelineDown(object sender, MouseButtonEventArgs e)
         {
             var mousePosition =  e.GetPosition(LineScroll);
-            SetCutLine(mousePosition.X);
+            SetCutLine(mousePosition.X - TimeLineScroll.HorizontalOffset);
+        }
+
+        private void OnTimeLineScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            ticktock(null, null);
+            var curX = SelectedBorder.RenderTransform.Value.OffsetX;
+            SelectedBorder.RenderTransform = new TranslateTransform(curX - e.HorizontalChange, 62);
+        }
+
+        private int selectedClip = -1;
+
+        private void OnCutButtonClick(object sender, RoutedEventArgs e)
+        {
+            int i;
+            for (i = 0; i < VideoClips.Count; i++)
+            {
+                System.Windows.Point relativePoint = VideoClips[i].TransformToAncestor(ClipStack).Transform(new System.Windows.Point(0, 0));
+                double clipEndPos = relativePoint.X + VideoClips[i].ActualWidth;
+                if (Math.Abs(relativePoint.X - _cutlinePosX) < 0.001 || Math.Abs(clipEndPos - _cutlinePosX) < 0.001) return;
+                if (_cutlinePosX > relativePoint.X && _cutlinePosX < clipEndPos)
+                {
+                    if (selectedClip == i)
+                    {
+                        selectedClip = -1;
+                        SelectedBorder.Visibility = Visibility.Hidden;
+                    }
+
+                    var _startPos = (_cutlinePosX + TimeLineScroll.HorizontalOffset) / ClipStack.ActualWidth * _duration;
+                    var _endPos = VideoClips[i]._endPos;
+
+                    var clip = new VideoClipControl(_capture, _firstImage, _startPos, _endPos, _clipWidth, _timeIntervals[(int)(ZoomSlider.Value)]);
+                    ClipStack.Children.Insert(i + 1, clip);
+                    VideoClips.Insert(i + 1, clip);
+                    VideoClips[i].UpdateEndPos(_startPos);
+
+                    var audioClip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, clip.ThumbnailControl.Width, _startPos, _endPos, _duration);
+                    WaveStack.Children.Insert(i + 1, audioClip);
+                    AudioClips.Insert(i + 1, audioClip);
+                    AudioClips[i].UpdateEndPos(_startPos, VideoClips[i].ThumbnailControl.Width);
+                    break;
+                }
+            }
+        }
+
+        private void OnClipMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            int i = 0;
+            var pos = e.GetPosition(ClipStack);
+            for (i = 0; i < VideoClips.Count; i++)
+            {
+                var relativePoint = VideoClips[i].TransformToAncestor(ClipStack).Transform(new System.Windows.Point(0, 0));
+                double clipEndPos = relativePoint.X + VideoClips[i].ActualWidth;
+                if (Math.Abs(relativePoint.X - pos.X) < 0.001 || Math.Abs(clipEndPos - pos.X) < 0.001) return;
+                if (pos.X > relativePoint.X && pos.X < clipEndPos)
+                {
+                    if (selectedClip == i)
+                    {
+                        SelectedBorder.Visibility = Visibility.Hidden;
+                        selectedClip = -1;
+                    }
+                    else
+                    {
+                        SelectedBorder.Width = VideoClips[i].ActualWidth;
+                        SelectedBorder.Height = 50;
+                        SelectedBorder.RenderTransform = new TranslateTransform(relativePoint.X - TimeLineScroll.HorizontalOffset, 62);
+                        SelectedBorder.Visibility = Visibility.Visible;
+                        selectedClip = i;
+                    }
+                    return;
+                }
+            }
+        }
+
+        private void OnDeleteClip(object sender, RoutedEventArgs e)
+        {
+            if (selectedClip == -1) return;
+            VideoClips.RemoveAt(selectedClip);
+            ClipStack.Children.RemoveAt(selectedClip);
+            AudioClips.RemoveAt(selectedClip);
+            WaveStack.Children.RemoveAt(selectedClip);
+            selectedClip = -1;
+            SelectedBorder.Visibility = Visibility.Hidden;
         }
 
         private void SetCutLine(double x)
         {
             _cutlinePosX = x;
-            double sec = (x + TimeLineScroll.HorizontalOffset) / ThumbnailControl.Width * _duration;
+            double sec = (x + TimeLineScroll.HorizontalOffset) / ClipStack.ActualWidth * _duration;
             CutButton.RenderTransform = new TranslateTransform(x, 0);
             CutLine.RenderTransform = new TranslateTransform(x, 0);
             CutLabel.RenderTransform = new TranslateTransform(x, 0);

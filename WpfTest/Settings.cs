@@ -57,8 +57,8 @@ namespace WpfTest
             IncludeSttResult = (bool)(settings.IncludeSttResult ?? true);
             IncludeAudioFileSize = (bool)(settings.IncludeAudioFileSize ?? true);
             IncludeAudioLengthMillis = (bool)(settings.IncludeAudioLengthMillis ?? true);
-            AudioWaveColor = (string)(settings.AudioWaveColor ?? "#FFA6A1B7");
-            AudioWaveBackgroundColor = (string)(settings.AudioWaveBackgroundColor ?? "#FF2D2D30");
+            AudioWaveColor = (string)(settings.AudioWaveColor ?? "#FFFFFFFF");
+            AudioWaveBackgroundColor = (string)(settings.AudioWaveBackgroundColor ?? "#FF252525");
             AudioWaveSelectionColor = (string)(settings.AudioWaveSelectionColor ?? "#1EFFFFFF");
             ChunkTextColor = (string)(settings.ChunkTextColor ?? "White");
             ChunkSTTColor = (string)(settings.ChunkSTTColor ?? "#FF324F46");
