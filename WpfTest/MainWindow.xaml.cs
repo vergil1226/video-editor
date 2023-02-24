@@ -48,7 +48,7 @@ namespace WpfTest
         DispatcherTimer _timer = new DispatcherTimer();
         BitmapImage _firstImage = new BitmapImage();
         private bool _run = false, _fullscreen = false, _altPressed = false, _mute = false, _maximize = false, _mediaLoaded = false;
-        private double _clipWidth, _cutlinePosX, _duration;
+        private double _clipWidth, _cutlinePosX, _duration, _curDuraiton;
         private System.Windows.Point _positionInBlock;
         private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 10 };
         private string _videoFile = null;
@@ -93,10 +93,41 @@ namespace WpfTest
         {
             if (!_mediaLoaded) return;
             double sec = media.Position.TotalSeconds;
-            TimeSlider.Value = sec;
+
+            if (ClipStack.Children.Count > 0 && ClipStack.ActualWidth > 0)
+            {
+                double value = _curDuraiton * (_cutlinePosX + TimeLineScroll.HorizontalOffset) / ClipStack.ActualWidth;
+                TimeSlider.Value = value;
+                Text1.Text = GetFormatTime((int)value);
+                CutLabel.Content = GetFormatTime((int)value);
+            }
+
             if (CutButton.IsMouseCaptured) return;
-            _cutlinePosX = sec * 200.0 / _timeIntervals[(int)ZoomSlider.Value] - TimeLineScroll.HorizontalOffset;
-            if (_cutlinePosX < 0 && _run)
+
+            int i;
+            if (_run)
+            {
+                for (i = 0; i < VideoClips.Count - 1; i++)
+                {
+                    if (sec > VideoClips[i]._endPos[VideoClips[i]._endPos.Count - 1] && sec < VideoClips[i + 1]._startPos[0])
+                    {
+                        sec = VideoClips[i + 1]._startPos[0];
+                        media.Position = new TimeSpan(0, 0, 0, (int)sec, (int)(sec * 1000) % 1000);
+                        break;
+                    }
+                }
+            }
+
+            for (i = 0; i < VideoClips.Count; i++)
+            {
+                double pos = VideoClips[i].GetCurrentPos(sec);
+                if (pos < 0) continue;
+                System.Windows.Point relativePoint = VideoClips[i].TransformToAncestor(ClipStack).Transform(new System.Windows.Point(0, 0));
+                _cutlinePosX = relativePoint.X + pos - TimeLineScroll.HorizontalOffset;
+                break;
+            }
+
+            /*if (_cutlinePosX < 0 && _run)
             {
                 _cutlinePosX += TimeLineScroll.ActualWidth;
                 TimeLineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset - TimeLineScroll.ActualWidth);
@@ -105,12 +136,11 @@ namespace WpfTest
             {
                 _cutlinePosX-= TimeLineScroll.ActualWidth;
                 TimeLineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset + TimeLineScroll.ActualWidth);
-            }
+            }*/
             TranslateTransform _transform = new TranslateTransform(_cutlinePosX, 0);
             CutButton.RenderTransform = _transform;
             CutLine.RenderTransform = _transform;
             CutLabel.RenderTransform = _transform;
-            CutLabel.Content = GetFormatTime((int)sec);
         }
 
         private void ImportVideo_Click(object sender, RoutedEventArgs e)
@@ -145,12 +175,13 @@ namespace WpfTest
 
                     _clipWidth = 50 * _capture.FrameWidth / _capture.FrameHeight;
                     _duration = _capture.FrameCount / _capture.Fps;
+                    _curDuraiton = _duration;
+                    Text2.Text = GetFormatTime((int)_duration);
                     GetFrame(0, _firstImage);
                     VideoClipControl clip = new VideoClipControl(_capture, _firstImage, 0, _duration, _clipWidth, _timeIntervals[(int)ZoomSlider.Value]);
                     VideoClips.Add(clip);
                     ClipStack.Children.Add(clip);
                     InitWidth();
-
                     await ConvertLoad();
                     BgGrid.Children.Clear();
                 };
@@ -159,7 +190,7 @@ namespace WpfTest
 
         private void InitWidth()
         {
-            double _width = 200.0 / _timeIntervals[(int)ZoomSlider.Value] * _capture.FrameCount / _capture.Fps;
+            double _width = 200.0 / _timeIntervals[(int)ZoomSlider.Value] * _curDuraiton;
             LineControl.Width = ((int)(_width / TimeLineScroll.ActualWidth) + 1) * TimeLineScroll.ActualWidth;
             ClipScroll.Width = LineScroll.Width;
             TimeScroll.Width = LineControl.Width;
@@ -194,10 +225,11 @@ namespace WpfTest
             string wavLocation = System.IO.Path.GetDirectoryName(Environment.ProcessPath) + "\\temp";
             while (File.Exists(wavLocation + ".wav"))
             {
-                if (Regex.IsMatch(wavLocation, @"_\d+$"))
+                File.Delete(wavLocation + ".wav");
+                /*if (Regex.IsMatch(wavLocation, @"_\d+$"))
                     wavLocation = Regex.Replace(wavLocation, @"_\d+$", "_" + (int.Parse(wavLocation.Split('_').Last()) + 1).ToString());
                 else
-                    wavLocation = wavLocation + "_1";
+                    wavLocation = wavLocation + "_1";*/
             }
             GC.Collect();
 
@@ -214,7 +246,7 @@ namespace WpfTest
                     ffmpeg.StartInfo.Arguments = $"/K ffmpeg.exe -y -i \"{dlg.FileName}\" -c copy -vn -acodec pcm_s16le -ar 16000 -ac 1 \"{chunkSaveLocation}.wav\"";
                     ffmpeg.StartInfo.WindowStyle = ProcessWindowStyle.Normal;
 #else
-                    ffmpeg.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg", "ffmpeg.exe ");
+                    ffmpeg.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe ");
                     ffmpeg.StartInfo.Arguments = $"-y -i \"{_videoFile}\" -c copy -vn -acodec pcm_s16le -ar 16000 -ac 1 \"{wavLocation}\"";
                     ffmpeg.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
 #endif
@@ -576,8 +608,8 @@ namespace WpfTest
             {
                 System.Windows.Point relativePoint = VideoClips[i].TransformToAncestor(ClipStack).Transform(new System.Windows.Point(0, 0));
                 double clipEndPos = relativePoint.X + VideoClips[i].ActualWidth;
-                if (Math.Abs(relativePoint.X - _cutlinePosX) < 0.001 || Math.Abs(clipEndPos - _cutlinePosX) < 0.001) return;
-                if (_cutlinePosX > relativePoint.X && _cutlinePosX < clipEndPos)
+                if (Math.Abs(relativePoint.X - _cutlinePosX - TimeLineScroll.HorizontalOffset) < 0.001 || Math.Abs(clipEndPos - _cutlinePosX - TimeLineScroll.HorizontalOffset) < 0.001) return;
+                if (_cutlinePosX + TimeLineScroll.HorizontalOffset > relativePoint.X && _cutlinePosX + TimeLineScroll.HorizontalOffset < clipEndPos)
                 {
                     if (selectedClip == i)
                     {
@@ -585,8 +617,8 @@ namespace WpfTest
                         SelectedBorder.Visibility = Visibility.Hidden;
                     }
 
-                    var _startPos = (_cutlinePosX + TimeLineScroll.HorizontalOffset) / ClipStack.ActualWidth * _duration;
-                    var _endPos = VideoClips[i]._endPos;
+                    var _startPos = VideoClips[i].GetCurrentSec(_cutlinePosX + TimeLineScroll.HorizontalOffset - relativePoint.X);
+                    var _endPos = VideoClips[i]._endPos[VideoClips[i]._endPos.Count - 1];
 
                     var clip = new VideoClipControl(_capture, _firstImage, _startPos, _endPos, _clipWidth, _timeIntervals[(int)(ZoomSlider.Value)]);
                     ClipStack.Children.Insert(i + 1, clip);
@@ -634,6 +666,9 @@ namespace WpfTest
         private void OnDeleteClip(object sender, RoutedEventArgs e)
         {
             if (selectedClip == -1) return;
+            _curDuraiton -= VideoClips[selectedClip]._duration;
+            TimeSlider.Maximum = _curDuraiton;
+            Text2.Text = GetFormatTime((int)_curDuraiton);
             VideoClips.RemoveAt(selectedClip);
             ClipStack.Children.RemoveAt(selectedClip);
             AudioClips.RemoveAt(selectedClip);
@@ -645,7 +680,23 @@ namespace WpfTest
         private void SetCutLine(double x)
         {
             _cutlinePosX = x;
-            double sec = (x + TimeLineScroll.HorizontalOffset) / ClipStack.ActualWidth * _duration;
+            double sec = 0;
+            int i;
+            for (i = 0; i < VideoClips.Count; i++)
+            {
+                var relativePoint = VideoClips[i].TransformToAncestor(ClipStack).Transform(new System.Windows.Point(0, 0));
+                double clipEndPos = relativePoint.X + VideoClips[i].ActualWidth;
+                if (_cutlinePosX + TimeLineScroll.HorizontalOffset >= relativePoint.X && _cutlinePosX + TimeLineScroll.HorizontalOffset <= clipEndPos)
+                {
+                    sec = VideoClips[i].GetCurrentSec(_cutlinePosX - relativePoint.X + TimeLineScroll.HorizontalOffset);
+                    break;
+                }
+            }
+            if (i == VideoClips.Count)
+            {
+                return;
+                //sec = _duration;
+            }
             CutButton.RenderTransform = new TranslateTransform(x, 0);
             CutLine.RenderTransform = new TranslateTransform(x, 0);
             CutLabel.RenderTransform = new TranslateTransform(x, 0);
@@ -658,6 +709,8 @@ namespace WpfTest
         {
             ExportDialog exportDialog = new ExportDialog();
             exportDialog._capture = _capture;
+            exportDialog.VideoClips = VideoClips;
+            exportDialog.waveStream = WaveStream;
             exportDialog.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
             exportDialog.VerticalAlignment= System.Windows.VerticalAlignment.Top;
             exportDialog.Margin = new Thickness(0, 10, 35, 0);

@@ -456,7 +456,7 @@
                             Foreground="#FFFFFF" Margin="0 0 0 0" 
                             BorderThickness="0">
                         <StackPanel Orientation="Vertical">
-                            <TextBlock FontSize="16" Foreground="#FFFFFF" Text="{Binding ElementName=TimeSlider, Path=Value, StringFormat=00:00:00:00}"></TextBlock>
+                            <TextBlock Name="Text1" FontSize="16" Foreground="#FFFFFF" Text="00:00:00:00" />
                         </StackPanel>
                     </Button>
                     <Slider Name="TimeSlider" Grid.Column="4" Background="Transparent" 
@@ -467,7 +467,7 @@
                             Foreground="#FFFFFF" Margin="0 0 0 0" 
                             BorderThickness="0">
                         <StackPanel Orientation="Vertical">
-                            <TextBlock FontSize="16" Foreground="#FFFFFF" Text="{Binding ElementName=TimeSlider, Path=Maximum, Mode=OneWay, StringFormat=00:00:00:00}" />
+                            <TextBlock Name="Text2" FontSize="16" Foreground="#FFFFFF" Text="00:00:00:00" />
                         </StackPanel>
                     </Button>
                     <Button Grid.Column="6" Background="Transparent" 

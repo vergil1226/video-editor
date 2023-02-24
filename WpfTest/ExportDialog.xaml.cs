@@ -1,24 +1,22 @@
-﻿using Microsoft.Win32;
+﻿using FFMpegCore;
+using FFMpegCore.Enums;
+using FFMpegCore.Exceptions;
+using FFMpegCore.Pipes;
+using NAudio.Wave;
 using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Forms;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using System.Windows.Threading;
-using Video_Editor;
+using static WpfTest.Utils;
 
 namespace WpfTest
 {
@@ -29,8 +27,9 @@ namespace WpfTest
     public partial class ExportDialog : System.Windows.Controls.UserControl
     {
         public VideoCapture _capture;
-        private VideoWriter writer;
         private string _outputPath;
+        public ObservableCollection<VideoClipControl> VideoClips { get; set; }
+        public WaveStream waveStream { get; set; }
 
         public ExportDialog()
         {
@@ -56,36 +55,76 @@ namespace WpfTest
             }
         }
 
-        private void OnExport(object sender, RoutedEventArgs e)
+        private async void OnExport(object sender, RoutedEventArgs e)
         {
-            //int fcc = VideoWriter.FourCC(_capture.FourCC); //'M', 'J', 'P', 'G'
-            int fcc = VideoWriter.FourCC('M', 'J', 'P', 'G');
-            double fps = _capture.Fps;
             string outStr = _outputPath + '\\' + FileNameTextBox.Text + ".mp4";
-            writer = new VideoWriter(outStr, fcc, fps, new OpenCvSharp.Size(_capture.FrameWidth, _capture.FrameHeight), true);
+            //await FFMpegArguments.FromFileInput("C:\\1234.mp4").OutputToFile("D:\\temp.mp4", true, options => options.WithVideoBitrate(16000)).ProcessAsynchronously();
 
             ExportingGrid.Visibility = Visibility.Visible;
-            Exporting.Maximum = _capture.FrameCount;
 
-            DispatcherTimer time = new DispatcherTimer();
-            time.Interval = TimeSpan.FromMilliseconds(1);
-            time.Start();
-            time.Tick += delegate
+            await Task.Run(async () =>
             {
-                _capture.PosFrames = 0;
-                for (int i = 0; i < _capture.FrameCount; i++)
-                {
-                    Mat _image = new Mat();
-                    _capture.Read(_image);
-                    if (_image.Empty()) continue;
-                    writer.Write(_image);
-                }
-                writer.Dispose();
-                ExportingGrid.Visibility = Visibility.Hidden;
+                var audioWriter = new WaveFileWriter("input.wav", waveStream.WaveFormat);
+                var videoWriter = new VideoWriter("temp.mp4", (FourCC)_capture.Get(VideoCaptureProperties.FourCC), _capture.Fps, new OpenCvSharp.Size(_capture.FrameWidth, _capture.FrameHeight), true);
 
-                time.Stop();
-                this.Visibility = Visibility.Collapsed;
-            };
+                for (int i = 0; i < VideoClips.Count; i++)
+                {
+                    for (int j = 0; j < VideoClips[i]._startPos.Count; j++)
+                    {
+                        _capture.PosFrames = (int)(_capture.Fps * VideoClips[i]._startPos[j]);
+                        for (int k = _capture.PosFrames; k < _capture.Fps * VideoClips[i]._endPos[j]; k++)
+                        {
+                            Mat _image = new Mat();
+                            _capture.Read(_image);
+                            if (_image.Empty()) continue;
+                            videoWriter.Write(_image);
+                        }
+
+                        var start = (long)((VideoClips[i]._startPos[j] / waveStream.TotalTime.TotalSeconds) * waveStream.Length);
+                        var end = (long)((VideoClips[i]._endPos[j] / waveStream.TotalTime.TotalSeconds) * waveStream.Length);
+
+                        Func<double> alignStart = () => start / (double)waveStream.WaveFormat.BlockAlign;
+                        Func<double> alignEnd = () => end / (double)waveStream.WaveFormat.BlockAlign;
+
+                        while (alignStart() != (int)alignStart())
+                        {
+                            start += 1;
+                        }
+
+                        while (alignEnd() != (int)alignEnd())
+                        {
+                            end += 1;
+                        }
+
+                        waveStream.Position = start;
+                        byte[] buffer = new byte[1024];
+                        while (waveStream.Position < end)
+                        {
+                            int bytesRequired = (int)(end - waveStream.Position);
+                            if (bytesRequired > 0)
+                            {
+                                int bytesToRead = Math.Min(bytesRequired, buffer.Length);
+                                int bytesRead = waveStream.Read(buffer, 0, bytesToRead);
+                                if (bytesRead > 0)
+                                {
+                                    await audioWriter.WriteAsync(buffer, 0, bytesRead);
+                                }
+                            }
+                        }
+                    }
+                }
+                audioWriter.Dispose();
+                videoWriter.Dispose();
+
+                await FFMpegArguments.FromFileInput("temp.mp4").OutputToFile("input.mp4").ProcessAsynchronously();
+                FFMpeg.ReplaceAudio("input.mp4", "input.wav", outStr);
+
+                File.Delete("input.wav");
+                File.Delete("input.mp4");
+                File.Delete("temp.mp4");
+            });
+            ExportingGrid.Visibility = Visibility.Collapsed;
+            this.Visibility = Visibility.Collapsed;
         }
     }
 }

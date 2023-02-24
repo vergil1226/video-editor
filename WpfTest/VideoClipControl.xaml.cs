@@ -27,9 +27,13 @@ namespace WpfTest
     public partial class VideoClipControl : System.Windows.Controls.UserControl
     {
         private VideoCapture _capture;
-        public double _startPos = 0, _endPos = 0, _clipWidth;
+        public double _clipWidth;
         private int _timeInterval;
         private BitmapImage _firstImage;
+
+        public List<double> _startPos { get; private set; }
+        public List<double> _endPos{ get; private set; }
+        public double _duration = 0;
 
         public ObservableCollection<BitmapImage> Thumbnails { get; set; }
 
@@ -38,8 +42,10 @@ namespace WpfTest
             InitializeComponent();
             Thumbnails = new ObservableCollection<BitmapImage>();
             _capture = capture;
-            _startPos = startPos;
-            _endPos = endPos;
+            _startPos = new List<double>();
+            _endPos = new List<double>();
+            _startPos.Add(startPos);
+            _endPos.Add(endPos);
             _clipWidth = clipWidth;
             _firstImage = firstImage;
             _timeInterval = timeInterval;
@@ -47,15 +53,30 @@ namespace WpfTest
             InitClip();
         }
 
+
+        private double syncPos = 0;
+        private int syncPosId = 0;
+        private int syncThumbId = 0;
+        private double clipSec = 0;
         private void InitClip()
         {
-            ThumbnailControl.Width = 200.0 / _timeInterval * (_endPos - _startPos);
+            _duration = 0;
+            for (int i = 0; i < _startPos.Count; i++)
+            {
+                _duration += _endPos[i] - _startPos[i];
+            }
+            ThumbnailControl.Width = 200.0 / _timeInterval * _duration;
+            clipSec = _clipWidth * _timeInterval / 200.0;
             int length = (int)(ThumbnailControl.Width / _clipWidth) + 1;
             Thumbnails.Clear();
             for (int i = 0; i < length; i++)
             {
                 Thumbnails.Add(_firstImage);
             }
+
+            syncPos = _startPos[0] + clipSec / 2;
+            syncPosId = 0;
+            syncThumbId = 0;
             SyncThumbnails(length);
         }
 
@@ -66,23 +87,29 @@ namespace WpfTest
                 DispatcherTimer time = new DispatcherTimer();
                 time.Interval = TimeSpan.FromMilliseconds(10);
                 time.Start();
-                int j = i;
                 time.Tick += async delegate
                 {
-                    await SyncOne(j);
+                    await SyncOne(length);
                     time.Stop();
                 };
             }
         }
 
-        private async Task SyncOne(int i)
+        private async Task SyncOne(int length)
         {
-            int cnt = (int)(ThumbnailControl.Width / _clipWidth) + 1;
-            double _half = (double)_capture.FrameCount / cnt / 2;
+            if (syncPos > _endPos[syncPosId])
+            {
+                if (syncPosId + 1 >= _startPos.Count) return;
+                syncPos = _startPos[syncPosId + 1] + syncPos - _endPos[syncPosId];
+                syncPosId++;
+            }
+
             BitmapImage bitmapimage = new BitmapImage();
-            await GetFrame((int)(i * _capture.FrameCount / cnt + _half), bitmapimage);
-            if (i >= Thumbnails.Count) return;
-            Thumbnails[i] = bitmapimage;
+            await GetFrame((int)(_capture.Fps * syncPos), bitmapimage);
+            if (syncThumbId >= Thumbnails.Count) return;
+            Thumbnails[syncThumbId] = bitmapimage;
+            syncThumbId++;
+            syncPos += clipSec;
         }
 
         private async Task GetFrame(int pos, BitmapImage bitmapimage)
@@ -104,12 +131,63 @@ namespace WpfTest
         
         public void UpdateEndPos(double pos)
         {
-            _endPos = pos;
-            ThumbnailControl.Width = 200.0 / _timeInterval * (_endPos - _startPos);
-            int length = (int)(ThumbnailControl.Width / _clipWidth) + 1;
-            int curLen = Thumbnails.Count;
-            for (int i = length; i < curLen; i++)
-                Thumbnails.RemoveAt(length);
+            int i;
+            for (i = _endPos.Count - 1; i >= 0; i--)
+            {
+                if (pos == _startPos[i])
+                {
+                    _startPos.Remove(i);
+                    _endPos.Remove(i);
+                    break;
+                }
+                if (pos == _endPos[i])
+                {
+                    break;
+                }
+                if (_endPos[i] > pos && pos > _startPos[i])
+                {
+                    _endPos[i] = pos;
+                    break;
+                }
+                _startPos.RemoveAt(i);
+                _endPos.RemoveAt(i);
+            }
+
+            _duration = 0;
+            for (i = 0; i < _startPos.Count; i++)
+            {
+                _duration += _endPos[i] - _startPos[i];
+            }
+
+            ThumbnailControl.Width = 200.0 / _timeInterval * _duration;
+        }
+
+        public double GetCurrentSec(double pos)
+        {
+            double sec = pos * _timeInterval / 200.0;
+            for (int i = 0; i < _startPos.Count; i++)
+            {
+                if (sec <= _endPos[i] - _startPos[i])
+                {
+                    return _startPos[i] + sec;
+                }
+            }
+            return 0;
+        }
+
+        public double GetCurrentPos(double sec)
+        {
+            double pos = 0;
+            for (int i = 0; i < _startPos.Count;i++)
+            {
+                if (_startPos[i] <= sec && sec <= _endPos[i])
+                {
+                    pos += sec - _startPos[i];
+                    return ThumbnailControl.Width * pos / _duration;
+                }
+                pos += _endPos[i] - _startPos[i];
+            }
+            return -1;
         }
     }
 }
