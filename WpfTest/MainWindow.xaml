@@ -518,43 +518,43 @@
                             <ColumnDefinition Width="30"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Grid Grid.Column="0">
+                        <Grid Grid.Column="0" Visibility="Hidden">
                             <Button Width="30" Height="30" Background="Transparent" BorderThickness="0">
                                 <StackPanel>
                                     <Image Width="16" Source="Resources/editor_tool_timeline_start.png"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
-                        <Grid Grid.Column="1">
+                        <Grid Grid.Column="1" Visibility="Hidden">
                             <Button Width="30" Height="30" Background="Transparent" BorderThickness="0">
                                 <StackPanel>
                                     <Image Width="16" Source="Resources/editor_tool_timeline_end.png"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
-                        <Grid Grid.Column="2">
+                        <Grid Grid.Column="1">
                             <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Click="OnDeleteClip">
                                 <StackPanel>
                                     <Image Width="16" Source="Resources/editor_tool_timeline_del.png"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
-                        <Grid Grid.Column="3">
+                        <Grid Grid.Column="0">
                             <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Click="OnCutButtonClick">
                                 <StackPanel>
                                     <Image Width="16" Source="Resources/editor_tool_timeline_cut.png"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
-                        <Grid Grid.Column="4">
+                        <Grid Grid.Column="4" Visibility="Hidden">
                             <Button Width="30" Height="30" Background="Transparent" BorderThickness="0">
                                 <StackPanel>
                                     <Image Width="16" Source="Resources/editor_tool_timeline_pos.png"/>
                                 </StackPanel>
                             </Button>
                         </Grid>
-                        <Grid Grid.Column="5">
-                            <Button Width="30" Height="30" Background="Transparent" BorderThickness="0">
+                        <Grid Grid.Column="2">
+                            <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Click="OnClipMute">
                                 <StackPanel>
                                     <Image Width="16" Source="Resources/me_mute.png"/>
                                 </StackPanel>

@@ -6,92 +6,115 @@
              xmlns:gif="http://wpfanimatedgif.codeplex.com"
              xmlns:local="clr-namespace:Video_Editor"
              mc:Ignorable="d" 
-             Width="340"
+             Width="auto"
              Height="360"
              BorderThickness="0">
-    <Border BorderBrush="#868686" BorderThickness="1">
-        <Grid Background="#1D1D1D">
+    <Border BorderBrush="#868686" BorderThickness="2" CornerRadius="10">
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <Grid Grid.Row="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="30"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="40"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid Grid.Row="0">
-                    <Label Foreground="#C0C0C0" FontSize="12">Export</Label>
-                    <Button Background="Transparent" Width="25" BorderThickness="0" Padding="5" HorizontalAlignment="Right" Click="OnClose">
-                        <StackPanel>
-                            <Image Width="10" Source="Resources/winClose.png" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-                <Grid Grid.Row="1" Name="MainGrid">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="50"/>
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid Grid.Column="0" Margin="10,20,0,20" Background="#414141">
-                    </Grid>
-                    <Grid Grid.Column="1" Margin="10,20">
+            <Border Name="mask" Background="#1D1D1D" BorderBrush="Wheat" CornerRadius="10"/>
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <StackPanel.OpacityMask>
+                    <VisualBrush Visual="{Binding ElementName=mask}"/>
+                </StackPanel.OpacityMask>
+                <Grid Background="#1D1D1D">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="1">
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="1*"/>
-                            <RowDefinition Height="1*"/>
-                            <RowDefinition Height="1*"/>
-                            <RowDefinition Height="1*"/>
-                            <RowDefinition Height="1*"/>
-                            <RowDefinition Height="1*"/>
-                            <RowDefinition Height="1*"/>
+                            <RowDefinition Height="30"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="40"/>
                         </Grid.RowDefinitions>
-                        <Label Grid.Row="0" Foreground="#C0C0C0" VerticalContentAlignment="Center">Export To File And Save On Computer</Label>
-                        <Label Grid.Row="1" Foreground="#C0C0C0" VerticalContentAlignment="Center">Name</Label>
-                        <Border CornerRadius="3" BorderBrush="#C0C0C0" BorderThickness="1" Grid.Row="1" Width="120" HorizontalAlignment="Right" Margin="0,5">
-                            <TextBox Name="FileNameTextBox" Background="Transparent" BorderBrush="Transparent" Foreground="#C0C0C0" CaretBrush="#C0C0C0"></TextBox>
-                        </Border>
-                        <Label Grid.Row="2" Foreground="#C0C0C0" VerticalContentAlignment="Center">Save To</Label>
-                        <Border CornerRadius="3" BorderBrush="#C0C0C0" BorderThickness="1" Grid.Row="2" Width="120" HorizontalAlignment="Right" Margin="0,5">
-                            <Label Name="FolderNameLabel" Foreground="#C0C0C0" VerticalContentAlignment="Center"></Label>
-                        </Border>
-                        <Button Grid.Row="2" Background="Transparent" Width="25" BorderThickness="0" Padding="5" HorizontalAlignment="Right" Click="OnFile">
-                            <StackPanel>
-                                <Image Width="12" Source="Resources/media.png" />
-                            </StackPanel>
-                        </Button>
-                        <Label Grid.Row="3" Foreground="#C0C0C0" VerticalContentAlignment="Center">Resoultion</Label>
-                        <Label Name="ResolutionLabel" Grid.Row="3" Foreground="#C0C0C0" VerticalContentAlignment="Center" Width="120" HorizontalAlignment="Right"></Label>
-                        <Label Grid.Row="4" Foreground="#C0C0C0" VerticalContentAlignment="Center">Frame Rate</Label>
-                        <Label Name="FrameRateLabel" Grid.Row="4" Foreground="#C0C0C0" VerticalContentAlignment="Center" Width="120" HorizontalAlignment="Right"></Label>
-                        <Label Grid.Row="5" Foreground="#C0C0C0" VerticalContentAlignment="Center">Size</Label>
-                        <Label Name="SizeLabel" Grid.Row="5" Foreground="#C0C0C0" VerticalContentAlignment="Center" Width="120" HorizontalAlignment="Right">1.7M</Label>
-                        <Label Grid.Row="6" Foreground="#C0C0C0" VerticalContentAlignment="Center">Duration</Label>
-                        <Label Name="DurationLabel" Grid.Row="6" Foreground="#C0C0C0" VerticalContentAlignment="Center" Width="120" HorizontalAlignment="Right"></Label>
-                    </Grid>
-                </Grid>
-                <Grid Grid.Row="2">
-                    <Button Content="EXPORT" Margin="0,0,20,0"
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid Grid.Row="0">
+                            <Label Foreground="#C0C0C0" FontSize="12">Export</Label>
+                            <Button Background="Transparent" Width="25" BorderThickness="0" Padding="5" HorizontalAlignment="Right" Click="OnClose">
+                                <StackPanel>
+                                    <Image Width="10" Source="Resources/winClose.png" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <Grid Grid.Row="1" Name="MainGrid">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0" Margin="10,20,0,20" Background="#414141">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                </Grid.RowDefinitions>
+                                <RadioButton Grid.Row="0" Margin="10,0,0,0" GroupName="ExtGroup" Foreground="White" VerticalAlignment="Center" Checked="OnExtChecked">MP4</RadioButton>
+                                <RadioButton Grid.Row="1" Margin="10,0,0,0" GroupName="ExtGroup" Foreground="White" VerticalAlignment="Center" Checked="OnExtChecked">AVI</RadioButton>
+                                <RadioButton Grid.Row="2" Margin="10,0,0,0" GroupName="ExtGroup" Foreground="White" VerticalAlignment="Center" Checked="OnExtChecked">MOV</RadioButton>
+                                <RadioButton Grid.Row="3" Margin="10,0,0,0" GroupName="ExtGroup" Foreground="White" VerticalAlignment="Center" Checked="OnExtChecked">MPG</RadioButton>
+                                <!-- <RadioButton Grid.Row="4" Margin="10,0,0,0" GroupName="ExtGroup" Foreground="White" VerticalAlignment="Center" Checked="OnExtChecked">MOV</RadioButton> -->
+                            </Grid>
+                            <Grid Grid.Column="1" Margin="10,20">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                    <RowDefinition Height="1*"/>
+                                </Grid.RowDefinitions>
+                                <Label Grid.Row="0" Foreground="#C0C0C0" VerticalContentAlignment="Center">Export To File And Save On Computer</Label>
+                                <Label Grid.Row="1" Foreground="#C0C0C0" VerticalContentAlignment="Center">Name</Label>
+                                <Border CornerRadius="3" BorderBrush="#C0C0C0" BorderThickness="1" Grid.Row="1" Width="120" HorizontalAlignment="Right" Margin="0,5">
+                                    <TextBox Name="FileNameTextBox" Background="Transparent" BorderBrush="Transparent" Foreground="#C0C0C0" CaretBrush="#C0C0C0"></TextBox>
+                                </Border>
+                                <Label Grid.Row="2" Foreground="#C0C0C0" VerticalContentAlignment="Center">Save To</Label>
+                                <Border CornerRadius="3" BorderBrush="#C0C0C0" BorderThickness="1" Grid.Row="2" Width="120" HorizontalAlignment="Right" Margin="0,5">
+                                    <Label Name="FolderNameLabel" Foreground="#C0C0C0" VerticalContentAlignment="Center"></Label>
+                                </Border>
+                                <Button Grid.Row="2" Background="Transparent" Width="25" BorderThickness="0" Padding="5" HorizontalAlignment="Right" Click="OnFile">
+                                    <StackPanel>
+                                        <Image Width="12" Source="Resources/media.png" />
+                                    </StackPanel>
+                                </Button>
+                                <Label Grid.Row="3" Foreground="#C0C0C0" VerticalContentAlignment="Center">Resoultion</Label>
+                                <Label Name="ResolutionLabel" Grid.Row="3" Foreground="#C0C0C0" VerticalContentAlignment="Center" Width="120" HorizontalAlignment="Right"></Label>
+                                <Label Grid.Row="4" Foreground="#C0C0C0" VerticalContentAlignment="Center">Frame Rate</Label>
+                                <Label Name="FrameRateLabel" Grid.Row="4" Foreground="#C0C0C0" VerticalContentAlignment="Center" Width="120" HorizontalAlignment="Right"></Label>
+                                <Label Grid.Row="5" Foreground="#C0C0C0" VerticalContentAlignment="Center">Size</Label>
+                                <Label Name="SizeLabel" Grid.Row="5" Foreground="#C0C0C0" VerticalContentAlignment="Center" Width="120" HorizontalAlignment="Right">1.7M</Label>
+                                <Label Grid.Row="6" Foreground="#C0C0C0" VerticalContentAlignment="Center">Duration</Label>
+                                <Label Name="DurationLabel" Grid.Row="6" Foreground="#C0C0C0" VerticalContentAlignment="Center" Width="120" HorizontalAlignment="Right"></Label>
+                            </Grid>
+                        </Grid>
+                        <Grid Grid.Row="2">
+                            <Button Content="EXPORT" Margin="0,0,20,0"
                                 HorizontalAlignment="Right" Padding="8" Height="30" Width="60"
                                 VerticalAlignment="Center" Background="#575656" Foreground="#BCB2B2"
                                 FontSize="10" FontWeight="Bold" Click="OnExport">
-                        <Button.Resources>
-                            <Style TargetType="{x:Type Border}">
-                                <Setter Property="CornerRadius" Value="5"/>
-                                <Setter Property="BorderBrush" Value="#575656"/>
-                            </Style>
-                        </Button.Resources>
-                    </Button>
+                                <Button.Resources>
+                                    <Style TargetType="{x:Type Border}">
+                                        <Setter Property="CornerRadius" Value="5"/>
+                                        <Setter Property="BorderBrush" Value="#575656"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                    <Grid Name="ExportingGrid" Grid.Row="1" Background="#AA000000" Visibility="Hidden">
+                        <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                            <TextBlock FontSize="20" Foreground="White" TextAlignment="Center">Exporting...</TextBlock>
+                            <ProgressBar Name="Exporting" Height="15" Margin="10,10" IsIndeterminate="True"/>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
-            </Grid>
-            <Grid Name="ExportingGrid" Grid.Row="1" Background="#AA000000" Visibility="Hidden">
-                <StackPanel Orientation="Vertical" VerticalAlignment="Center">
-                    <TextBlock FontSize="20" Foreground="White" TextAlignment="Center">Exporting...</TextBlock>
-                    <ProgressBar Name="Exporting" Height="15" Margin="10,10" IsIndeterminate="True"/>
-                </StackPanel>
-            </Grid>
+            </StackPanel>
         </Grid>
     </Border>
 </UserControl>

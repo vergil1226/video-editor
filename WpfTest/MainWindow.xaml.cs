@@ -98,8 +98,8 @@ namespace WpfTest
             {
                 double value = _curDuraiton * (_cutlinePosX + TimeLineScroll.HorizontalOffset) / ClipStack.ActualWidth;
                 TimeSlider.Value = value;
-                Text1.Text = GetFormatTime((int)value);
-                CutLabel.Content = GetFormatTime((int)value);
+                Text1.Text = GetFormatTime(value);
+                CutLabel.Content = GetFormatTime(value);
             }
 
             if (CutButton.IsMouseCaptured) return;
@@ -176,7 +176,7 @@ namespace WpfTest
                     _clipWidth = 50 * _capture.FrameWidth / _capture.FrameHeight;
                     _duration = _capture.FrameCount / _capture.Fps;
                     _curDuraiton = _duration;
-                    Text2.Text = GetFormatTime((int)_duration);
+                    Text2.Text = GetFormatTime(_duration);
                     GetFrame(0, _firstImage);
                     VideoClipControl clip = new VideoClipControl(_capture, _firstImage, 0, _duration, _clipWidth, _timeIntervals[(int)ZoomSlider.Value]);
                     VideoClips.Add(clip);
@@ -195,6 +195,7 @@ namespace WpfTest
             ClipScroll.Width = LineScroll.Width;
             TimeScroll.Width = LineControl.Width;
             //WaveStack.Width = _width;
+
             SyncTimeLine();
             ticktock(null, null);
         }
@@ -282,11 +283,6 @@ namespace WpfTest
         private int waveFormSize = 0;
         private TimeSpan waveDuration = TimeSpan.Zero;
         private double maxSpan = 0.0;
-        private double downX = 0.0;
-        private double downScroll = 0.0;
-        private bool modifierCtrlPressed = false;
-        private bool modifierShiftPressed = false;
-        private bool drawWave = false;
 
         public async Task<bool> SetWaveStream(string fileName)
         {
@@ -297,7 +293,6 @@ namespace WpfTest
             waveSize = 0L;
             waveFormSize = 0;
             waveDuration = TimeSpan.Zero;
-            //UpdateVisuals();
 
             try
             {
@@ -402,18 +397,15 @@ namespace WpfTest
 
             GC.Collect();
 
-            drawWave = true;
-            //Render();
-
             var success = (WaveStream != null);
-            //btnPlayPause.IsEnabled = success;
 
             return success;
         }
 
-        private string GetFormatTime(int t)
+        private string GetFormatTime(double t)
         {
-            return "00:" + (t / 3600).ToString("D2") + " " + (t / 60).ToString("D2") + ":" + (t % 60).ToString("D2");
+            int tt = (int)t;
+            return (tt / 3600).ToString("D2") + ":" + ((tt % 3600) / 60).ToString("D2") + ":" + (tt % 60).ToString("D2") + ":" + (((int)(t * 100)) % 100).ToString("D2");
         }
 
         private void OnMediaOpend(object sender, RoutedEventArgs e)
@@ -503,6 +495,8 @@ namespace WpfTest
             double zoomRate = (double)_timeIntervals[(int)(ZoomSlider.Value + s)] / _timeIntervals[(int)(ZoomSlider.Value)];
             TimeLineScroll.ScrollToHorizontalOffset((TimeLineScroll.HorizontalOffset + _cutlinePosX) * zoomRate - _cutlinePosX);
             InitWidth();
+            selectedClip = -1;
+            SelectedBorder.Visibility = Visibility.Hidden;
 
             for (int i = 0; i < VideoClips.Count; i++)
             {
@@ -663,12 +657,19 @@ namespace WpfTest
             }
         }
 
+        private void OnClipMute(object sender, RoutedEventArgs e)
+        {
+            if (selectedClip == -1) return;
+            AudioClips[selectedClip].isMute = !AudioClips[selectedClip].isMute;
+            AudioClips[selectedClip].InvalidateVisual();
+        }
+
         private void OnDeleteClip(object sender, RoutedEventArgs e)
         {
             if (selectedClip == -1) return;
             _curDuraiton -= VideoClips[selectedClip]._duration;
             TimeSlider.Maximum = _curDuraiton;
-            Text2.Text = GetFormatTime((int)_curDuraiton);
+            Text2.Text = GetFormatTime(_curDuraiton);
             VideoClips.RemoveAt(selectedClip);
             ClipStack.Children.RemoveAt(selectedClip);
             AudioClips.RemoveAt(selectedClip);
@@ -700,7 +701,7 @@ namespace WpfTest
             CutButton.RenderTransform = new TranslateTransform(x, 0);
             CutLine.RenderTransform = new TranslateTransform(x, 0);
             CutLabel.RenderTransform = new TranslateTransform(x, 0);
-            CutLabel.Content = GetFormatTime((int)sec);
+            CutLabel.Content = GetFormatTime(sec);
             int mili = (int)(1000 * sec);
             media.Position = new TimeSpan(0, 0, 0, mili / 1000, mili % 1000);
         }
@@ -709,14 +710,25 @@ namespace WpfTest
         {
             ExportDialog exportDialog = new ExportDialog();
             exportDialog._capture = _capture;
+            exportDialog._videoPath = _videoFile;
             exportDialog.VideoClips = VideoClips;
+            exportDialog.AudioClips = AudioClips;
             exportDialog.waveStream = WaveStream;
             exportDialog.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
             exportDialog.VerticalAlignment= System.Windows.VerticalAlignment.Top;
             exportDialog.Margin = new Thickness(0, 10, 35, 0);
             exportDialog.ResolutionLabel.Content = _capture.FrameWidth.ToString() + '*' + _capture.FrameHeight.ToString();
             exportDialog.FrameRateLabel.Content = ((int)(_capture.Fps)).ToString() + "fps";
-            exportDialog.DurationLabel.Content = GetFormatTime(_capture.FrameCount);
+            exportDialog.DurationLabel.Content = GetFormatTime(_curDuraiton);
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            double len = new FileInfo(_videoFile).Length;
+            int order = 0;
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len = len / 1024;
+            }
+            exportDialog.SizeLabel.Content = String.Format("{0:0.##} {1}", len, sizes[order]);
             BgGrid.Children.Add(exportDialog);
         }
 

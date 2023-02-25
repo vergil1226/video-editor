@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using static WpfTest.Utils;
@@ -27,9 +28,12 @@ namespace WpfTest
     public partial class ExportDialog : System.Windows.Controls.UserControl
     {
         public VideoCapture _capture;
-        private string _outputPath;
+        private string _outputPath = "";
+        public string _videoPath;
         public ObservableCollection<VideoClipControl> VideoClips { get; set; }
+        public ObservableCollection<AudioClipControl> AudioClips { get; set; }
         public WaveStream waveStream { get; set; }
+        private string _ext = "";
 
         public ExportDialog()
         {
@@ -57,74 +61,132 @@ namespace WpfTest
 
         private async void OnExport(object sender, RoutedEventArgs e)
         {
-            string outStr = _outputPath + '\\' + FileNameTextBox.Text + ".mp4";
+            if (_ext == "")
+            {
+                System.Windows.MessageBox.Show("Please Select Video Type!", "Program Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (FileNameTextBox.Text.Length == 0)
+            {
+                System.Windows.MessageBox.Show("Please Enter Video Name!", "Program Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (_outputPath == "")
+            {
+                System.Windows.MessageBox.Show("Please Select Directory!", "Program Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string outStr = _outputPath + '\\' + FileNameTextBox.Text + _ext;
             //await FFMpegArguments.FromFileInput("C:\\1234.mp4").OutputToFile("D:\\temp.mp4", true, options => options.WithVideoBitrate(16000)).ProcessAsynchronously();
 
             ExportingGrid.Visibility = Visibility.Visible;
 
-            await Task.Run(async () =>
+            List<string> paths = new List<string>();
+
+            try
             {
-                var audioWriter = new WaveFileWriter("input.wav", waveStream.WaveFormat);
-                var videoWriter = new VideoWriter("temp.mp4", (FourCC)_capture.Get(VideoCaptureProperties.FourCC), _capture.Fps, new OpenCvSharp.Size(_capture.FrameWidth, _capture.FrameHeight), true);
+                await Task.Run(async () =>
+                {                
+                    int c = 1;
 
-                for (int i = 0; i < VideoClips.Count; i++)
-                {
-                    for (int j = 0; j < VideoClips[i]._startPos.Count; j++)
+                    for (int i = 0; i < VideoClips.Count; i++)
                     {
-                        _capture.PosFrames = (int)(_capture.Fps * VideoClips[i]._startPos[j]);
-                        for (int k = _capture.PosFrames; k < _capture.Fps * VideoClips[i]._endPos[j]; k++)
+                        for (int j = 0; j < VideoClips[i]._startPos.Count; j++)
                         {
-                            Mat _image = new Mat();
-                            _capture.Read(_image);
-                            if (_image.Empty()) continue;
-                            videoWriter.Write(_image);
-                        }
+                            string command = "-y ";
+                            command += " -ss ";
+                            command += VideoClips[i]._startPos[j].ToString();
+                            command += " -i " + '"' + _videoPath + '"';
+                            command += " -to ";
+                            command += (VideoClips[i]._endPos[j]).ToString();
+                            if (AudioClips[i].isMute) command += " -an";
+                            command += " part";
+                            command += c.ToString() + _ext;
+                            c++;
 
-                        var start = (long)((VideoClips[i]._startPos[j] / waveStream.TotalTime.TotalSeconds) * waveStream.Length);
-                        var end = (long)((VideoClips[i]._endPos[j] / waveStream.TotalTime.TotalSeconds) * waveStream.Length);
-
-                        Func<double> alignStart = () => start / (double)waveStream.WaveFormat.BlockAlign;
-                        Func<double> alignEnd = () => end / (double)waveStream.WaveFormat.BlockAlign;
-
-                        while (alignStart() != (int)alignStart())
-                        {
-                            start += 1;
-                        }
-
-                        while (alignEnd() != (int)alignEnd())
-                        {
-                            end += 1;
-                        }
-
-                        waveStream.Position = start;
-                        byte[] buffer = new byte[1024];
-                        while (waveStream.Position < end)
-                        {
-                            int bytesRequired = (int)(end - waveStream.Position);
-                            if (bytesRequired > 0)
-                            {
-                                int bytesToRead = Math.Min(bytesRequired, buffer.Length);
-                                int bytesRead = waveStream.Read(buffer, 0, bytesToRead);
-                                if (bytesRead > 0)
-                                {
-                                    await audioWriter.WriteAsync(buffer, 0, bytesRead);
-                                }
-                            }
+                            Process cutProcess = new Process();
+                            cutProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
+                            cutProcess.StartInfo.Arguments = command;
+                            cutProcess.StartInfo.UseShellExecute = true;
+                            cutProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                            cutProcess.Start();
+                            cutProcess.WaitForExit();
+                            if (cutProcess.ExitCode != 0) throw new Exception($"ffmpeg.exe exited with code {cutProcess.ExitCode}");
                         }
                     }
+
+                    string joinCommand = "-y";
+
+                    for (int i = 0; i < VideoClips.Count; i++)
+                    {
+                        if (AudioClips[i].isMute)
+                        {
+                            string str = "part_" + (i + 1).ToString() + _ext;
+                            Process muteProcess = new Process();
+                            muteProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
+                            muteProcess.StartInfo.Arguments = "-y -i part" + (i + 1).ToString() + _ext + " -f lavfi -i aevalsrc=0:c=6:s=48000 -shortest -c:v copy " + str;
+                            muteProcess.StartInfo.UseShellExecute = true;
+                            muteProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                            muteProcess.Start();
+                            muteProcess.WaitForExit();
+                            paths.Add(str);
+                            File.Delete("part" +(i + 1).ToString() + _ext);
+
+                            if (muteProcess.ExitCode != 0) throw new Exception($"ffmpeg.exe exited with code {muteProcess.ExitCode}");
+                        }
+                        else
+                        {
+                            paths.Add("part" + (i + 1).ToString() + _ext);
+                        }
+                        joinCommand += " -i " + paths[i];
+                    }
+
+                    c = paths.Count;
+                    joinCommand += " -filter_complex " + '"';
+                    for (int i = 0; i < c; i++)
+                    {
+                        joinCommand += '[' + i.ToString() + ":v][" + i.ToString() + ":a]";
+                    }
+                    joinCommand += "concat=n=" + c.ToString() + ":v=1:a=1" + '"' + " " + '"' + outStr + '"';
+
+                    Process joinProcess = new Process();
+                    joinProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
+                    //joinProcess.StartInfo.Arguments = "-y -f concat -safe 0 -i join.txt -c copy -movflags +faststart " + outStr;
+                    joinProcess.StartInfo.Arguments = joinCommand;
+                    joinProcess.StartInfo.UseShellExecute = true;
+                    joinProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                    joinProcess.Start();
+                    joinProcess.WaitForExit();
+                    if (joinProcess.ExitCode != 0) throw new Exception($"ffmpeg.exe exited with code {joinProcess.ExitCode}");
+
+                    System.Windows.MessageBox.Show("Successfully Exported!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                });
+            }
+            catch (TaskCanceledException) { }
+            catch (Exception ex)
+            {
+                Logger.Log($"{ex.Message}:\n{ex.StackTrace}", Logger.Type.Error);
+                System.Windows.MessageBox.Show(ex.Message, "Program Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                for (int i = 0; i < paths.Count; i++)
+                {
+                    File.Delete(paths[i]);
                 }
-                audioWriter.Dispose();
-                videoWriter.Dispose();
+            }
 
-                await FFMpegArguments.FromFileInput("temp.mp4").OutputToFile("input.mp4").ProcessAsynchronously();
-                FFMpeg.ReplaceAudio("input.mp4", "input.wav", outStr);
-
-                File.Delete("input.wav");
-                File.Delete("input.mp4");
-                File.Delete("temp.mp4");
-            });
             ExportingGrid.Visibility = Visibility.Collapsed;
             this.Visibility = Visibility.Collapsed;
+        }
+
+        private void OnExtChecked(object sender, RoutedEventArgs e)
+        {
+            System.Windows.Controls.RadioButton rb = sender as System.Windows.Controls.RadioButton;
+            _ext = "." + rb.Content.ToString().ToLower();
         }
     }
 }

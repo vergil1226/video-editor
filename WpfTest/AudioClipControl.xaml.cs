@@ -31,6 +31,7 @@ namespace WpfTest
         private double startPos = 0.0;
         private double endPos = 0.0;
         private double duration = 0.0;
+        public bool isMute = false;
 
         public AudioClipControl(List<float> _WaveFormData, int _waveFormSize, double _maxSpan, double _width, double _startPos, double _endPos, double _duration)
         {
@@ -87,7 +88,7 @@ namespace WpfTest
             var a = new System.Windows.Point(0, drawCenter);
             var b = a;
 
-            var pen = new Pen((SolidColorBrush)Utils.BrushConverter.ConvertFromString(Settings.AudioWaveColor), 1);
+            var pen = isMute ? new Pen((SolidColorBrush)Utils.BrushConverter.ConvertFromString(Settings.AudioMutedWaveColor), 1) : new Pen((SolidColorBrush)Utils.BrushConverter.ConvertFromString(Settings.AudioWaveColor), 1);
 
             for (int i = 0; i < Width && (sampleSize * i) + sampleSize < visibleSample.Count(); i++)
             {

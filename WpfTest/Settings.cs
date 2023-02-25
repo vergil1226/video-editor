@@ -18,6 +18,7 @@ namespace WpfTest
         public static bool IncludeAudioFileSize { get; set; }
         public static bool IncludeAudioLengthMillis { get; set; }
         public static string AudioWaveColor { get; set; }
+        public static string AudioMutedWaveColor { get; set; }
         public static string AudioWaveBackgroundColor { get; set; }
         public static string AudioWaveSelectionColor { get; set; }
         public static string ChunkTextColor { get; set; }
@@ -58,6 +59,7 @@ namespace WpfTest
             IncludeAudioFileSize = (bool)(settings.IncludeAudioFileSize ?? true);
             IncludeAudioLengthMillis = (bool)(settings.IncludeAudioLengthMillis ?? true);
             AudioWaveColor = (string)(settings.AudioWaveColor ?? "#FFFFFFFF");
+            AudioMutedWaveColor = (string)(settings.AudioMutedWaveColor ?? "#FF888888");
             AudioWaveBackgroundColor = (string)(settings.AudioWaveBackgroundColor ?? "#FF252525");
             AudioWaveSelectionColor = (string)(settings.AudioWaveSelectionColor ?? "#1EFFFFFF");
             ChunkTextColor = (string)(settings.ChunkTextColor ?? "White");
