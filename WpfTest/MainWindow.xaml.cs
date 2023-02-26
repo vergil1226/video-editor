@@ -443,6 +443,7 @@ namespace WpfTest
             int pos = Convert.ToInt32(TimeSlider.Value - 1);
             media.Position = new TimeSpan(0, 0, 0, pos, 0);
             TimeSlider.Value = pos;
+            ticktock(null, null);
         }
 
         private void Button_Forward(object sender, RoutedEventArgs e)
@@ -450,6 +451,7 @@ namespace WpfTest
             int pos = Convert.ToInt32(TimeSlider.Value + 1);
             media.Position = new TimeSpan(0, 0, 0, pos, 0);
             TimeSlider.Value = pos;
+            ticktock(null, null);
         }
 
         private void TimeSliderLButtonUp(object sender, MouseButtonEventArgs e)
@@ -540,12 +542,16 @@ namespace WpfTest
             }
         }
 
+        private bool cutlineMoved = false;
+        private double prevCutlinePos = -1;
         private void CutButtonDown(object sender, MouseButtonEventArgs e)
         {
             // when the mouse is down, get the position within the current control. (so the control top/left doesn't move to the mouse position)
             _positionInBlock = Mouse.GetPosition(CutButton);
 
             // capture the mouse (so the mouse move events are still triggered (even when the mouse is not above the control)
+            cutlineMoved = false;
+            prevCutlinePos = _cutlinePosX;
             CutButton.CaptureMouse();
             if (_run)
             {
@@ -568,6 +574,7 @@ namespace WpfTest
 
                 // move the user control.
                 double x = mousePosition.X - _positionInBlock.X + 12;
+                if (Math.Abs(prevCutlinePos - x) > 0.001) cutlineMoved = true;
                 if (x < 0) x = 0;
                 if (x > TimeLineScroll.ActualWidth) x = TimeLineScroll.ActualWidth;
                 SetCutLine(x);
@@ -577,7 +584,14 @@ namespace WpfTest
         private void CutButtonUp(object sender, MouseButtonEventArgs e)
         {
             // release this control.
-            CutButton.ReleaseMouseCapture();
+            if (CutButton.IsMouseCaptured)
+            {
+                CutButton.ReleaseMouseCapture();
+                if (!cutlineMoved)
+                {
+                    OnCutButtonClick(null, null);
+                }
+            }
         }
 
         private void OnTimelineDown(object sender, MouseButtonEventArgs e)

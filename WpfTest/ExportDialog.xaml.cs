@@ -33,11 +33,12 @@ namespace WpfTest
         public ObservableCollection<VideoClipControl> VideoClips { get; set; }
         public ObservableCollection<AudioClipControl> AudioClips { get; set; }
         public WaveStream waveStream { get; set; }
-        private string _ext = "";
+        private string _ext = ".mp4";
 
         public ExportDialog()
         {
             InitializeComponent();
+            Mp4Radio.IsChecked = true;
         }
 
         private void OnClose(object sender, RoutedEventArgs e)
