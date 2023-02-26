@@ -1,31 +1,19 @@
-﻿using Microsoft.Win32;
-using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
+﻿using NAudio.Wave;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
-using SharpVectors.Dom.Svg;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Numerics;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 using Video_Editor;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 using static WpfTest.Utils;
 
 namespace WpfTest
@@ -50,7 +38,7 @@ namespace WpfTest
         private bool _run = false, _fullscreen = false, _altPressed = false, _mute = false, _maximize = false, _mediaLoaded = false;
         private double _clipWidth, _cutlinePosX, _duration, _curDuraiton;
         private System.Windows.Point _positionInBlock;
-        private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 10 };
+        private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 5 };
         private string _videoFile = null;
 
         public ObservableCollection<VideoClipControl> VideoClips { get; set; }
@@ -127,16 +115,6 @@ namespace WpfTest
                 break;
             }
 
-            /*if (_cutlinePosX < 0 && _run)
-            {
-                _cutlinePosX += TimeLineScroll.ActualWidth;
-                TimeLineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset - TimeLineScroll.ActualWidth);
-            }
-            else if (_cutlinePosX > TimeLineScroll.ActualWidth && _run)
-            {
-                _cutlinePosX-= TimeLineScroll.ActualWidth;
-                TimeLineScroll.ScrollToHorizontalOffset(TimeLineScroll.HorizontalOffset + TimeLineScroll.ActualWidth);
-            }*/
             TranslateTransform _transform = new TranslateTransform(_cutlinePosX, 0);
             CutButton.RenderTransform = _transform;
             CutLine.RenderTransform = _transform;
@@ -177,6 +155,17 @@ namespace WpfTest
                     _duration = _capture.FrameCount / _capture.Fps;
                     _curDuraiton = _duration;
                     Text2.Text = GetFormatTime(_duration);
+
+                    int mi = 0;
+                    for (int i = 1; i < 10; i++)
+                    {
+                        if (Math.Abs(_timeIntervals[mi] - _duration) > Math.Abs(_timeIntervals[i] - _duration))
+                        {
+                            mi = i;
+                        }
+                    }
+                    ZoomSlider.Value = Math.Min(mi + 1, 9);
+
                     GetFrame(0, _firstImage);
                     VideoClipControl clip = new VideoClipControl(_capture, _firstImage, 0, _duration, _clipWidth, _timeIntervals[(int)ZoomSlider.Value]);
                     VideoClips.Add(clip);
@@ -440,16 +429,18 @@ namespace WpfTest
 
         private void Button_Prev(object sender, RoutedEventArgs e)
         {
-            int pos = Convert.ToInt32(TimeSlider.Value - 1);
-            media.Position = new TimeSpan(0, 0, 0, pos, 0);
+            double pos = TimeSlider.Value - 0.5;
+            int mili = (int)(pos * 1000);
+            media.Position = new TimeSpan(0, 0, 0, mili / 1000, mili % 1000);
             TimeSlider.Value = pos;
             ticktock(null, null);
         }
 
         private void Button_Forward(object sender, RoutedEventArgs e)
         {
-            int pos = Convert.ToInt32(TimeSlider.Value + 1);
-            media.Position = new TimeSpan(0, 0, 0, pos, 0);
+            double pos = TimeSlider.Value + 0.5;
+            int mili = (int)(pos * 1000);
+            media.Position = new TimeSpan(0, 0, 0, mili / 1000, mili % 1000);
             TimeSlider.Value = pos;
             ticktock(null, null);
         }

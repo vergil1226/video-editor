@@ -1,22 +1,13 @@
-﻿using FFMpegCore;
-using FFMpegCore.Enums;
-using FFMpegCore.Exceptions;
-using FFMpegCore.Pipes;
-using NAudio.Wave;
+﻿using NAudio.Wave;
 using OpenCvSharp;
-using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Forms;
-using System.Windows.Threading;
 using static WpfTest.Utils;
 
 namespace WpfTest
