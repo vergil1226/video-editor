@@ -10,4 +10,4 @@ It is developed by Visual Studio 2022.
    Like this "./WpfTest/bin/Debug/net7.0-windows/ffmpeg.exe"
  - Finally, rebuild and execute.
 
-Enjoy your editing video.
+Enjoy your video editing.
