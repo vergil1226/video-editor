@@ -90,78 +90,43 @@ namespace WpfTest
             {
                 await Task.Run(async () =>
                 {                
-                    int c = 1;
+                    string mainCommand = "-y -i " + '"' + _videoPath + '"';
+                    string vcommand = " -vf " + '"' + "select='";
+                    string acommand = " -af " + '"';
+                    string aselect = "aselect='";
 
                     for (int i = 0; i < VideoClips.Count; i++)
                     {
                         for (int j = 0; j < VideoClips[i]._startPos.Count; j++)
                         {
-                            string command = "-y ";
-                            command += " -i " + '"' + _videoPath + '"';
-                            command += " -ss ";
-                            command += VideoClips[i]._startPos[j].ToString();
-                            command += " -to ";
-                            command += (VideoClips[i]._endPos[j]).ToString();
-                            if (AudioClips[i].isMute) command += " -an";
-                            command += " part";
-                            command += c.ToString() + _ext;
-                            c++;
+                            if (i != 0 || j != 0)
+                            {
+                                vcommand += '+';
+                                aselect += "+";
+                            }
+                            string str = "between(t," + VideoClips[i]._startPos[j].ToString() + "," + VideoClips[i]._endPos[j].ToString() + ")";
+                            vcommand += str;
+                            aselect += str;
 
-                            Process cutProcess = new Process();
-                            cutProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
-                            cutProcess.StartInfo.Arguments = command;
-                            cutProcess.StartInfo.UseShellExecute = true;
-                            cutProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                            cutProcess.Start();
-                            cutProcess.WaitForExit();
-                            if (cutProcess.ExitCode != 0) throw new Exception($"ffmpeg.exe exited with code {cutProcess.ExitCode}");
+                            if (AudioClips[i].isMute)
+                            {
+                                acommand += "volume=enable='" + str + "':volume=0, ";
+                            }
                         }
                     }
 
-                    string joinCommand = "-y";
+                    vcommand += "',setpts=N/FRAME_RATE/TB" + '"';
+                    acommand += aselect + "',asetpts=N/SR/TB" + '"';
+                    mainCommand += vcommand + acommand + " " + '"' + outStr + '"';
 
-                    for (int i = 0; i < VideoClips.Count; i++)
-                    {
-                        if (AudioClips[i].isMute)
-                        {
-                            string str = "part_" + (i + 1).ToString() + _ext;
-                            Process muteProcess = new Process();
-                            muteProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
-                            muteProcess.StartInfo.Arguments = "-y -i part" + (i + 1).ToString() + _ext + " -f lavfi -i aevalsrc=0:c=6:s=48000 -shortest " + str;
-                            muteProcess.StartInfo.UseShellExecute = true;
-                            muteProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                            muteProcess.Start();
-                            muteProcess.WaitForExit();
-                            paths.Add(str);
-                            File.Delete("part" +(i + 1).ToString() + _ext);
-
-                            if (muteProcess.ExitCode != 0) throw new Exception($"ffmpeg.exe exited with code {muteProcess.ExitCode}");
-                        }
-                        else
-                        {
-                            paths.Add("part" + (i + 1).ToString() + _ext);
-                        }
-                        joinCommand += " -i " + paths[i];
-                    }
-
-                    c = paths.Count;
-                    joinCommand += " -filter_complex " + '"';
-                    for (int i = 0; i < c; i++)
-                    {
-                        joinCommand += '[' + i.ToString() + ":v][" + i.ToString() + ":a]";
-                    }
-                    joinCommand += "concat=n=" + c.ToString() + ":v=1:a=1" + '"' + " " + '"' + outStr + '"';
-
-                    File.WriteAllLines("join.txt", paths);
-                    Process joinProcess = new Process();
-                    joinProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
-                    //joinProcess.StartInfo.Arguments = "-y -f concat -safe 0 -i join.txt -c copy " + outStr;
-                    joinProcess.StartInfo.Arguments = joinCommand;
-                    joinProcess.StartInfo.UseShellExecute = true;
-                    joinProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                    joinProcess.Start();
-                    joinProcess.WaitForExit();
-                    if (joinProcess.ExitCode != 0) throw new Exception($"ffmpeg.exe exited with code {joinProcess.ExitCode}");
+                    Process cutProcess = new Process();
+                    cutProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
+                    cutProcess.StartInfo.Arguments = mainCommand;
+                    cutProcess.StartInfo.UseShellExecute = true;
+                    cutProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                    cutProcess.Start();
+                    cutProcess.WaitForExit();
+                    if (cutProcess.ExitCode != 0) throw new Exception($"ffmpeg.exe exited with code {cutProcess.ExitCode}");
 
                     System.Windows.MessageBox.Show("Successfully Exported!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 });
