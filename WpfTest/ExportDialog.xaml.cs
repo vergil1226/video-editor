@@ -97,9 +97,9 @@ namespace WpfTest
                         for (int j = 0; j < VideoClips[i]._startPos.Count; j++)
                         {
                             string command = "-y ";
+                            command += " -i " + '"' + _videoPath + '"';
                             command += " -ss ";
                             command += VideoClips[i]._startPos[j].ToString();
-                            command += " -i " + '"' + _videoPath + '"';
                             command += " -to ";
                             command += (VideoClips[i]._endPos[j]).ToString();
                             if (AudioClips[i].isMute) command += " -an";
@@ -127,7 +127,7 @@ namespace WpfTest
                             string str = "part_" + (i + 1).ToString() + _ext;
                             Process muteProcess = new Process();
                             muteProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
-                            muteProcess.StartInfo.Arguments = "-y -i part" + (i + 1).ToString() + _ext + " -f lavfi -i aevalsrc=0:c=6:s=48000 -shortest -c:v copy " + str;
+                            muteProcess.StartInfo.Arguments = "-y -i part" + (i + 1).ToString() + _ext + " -f lavfi -i aevalsrc=0:c=6:s=48000 -shortest " + str;
                             muteProcess.StartInfo.UseShellExecute = true;
                             muteProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
                             muteProcess.Start();
@@ -152,9 +152,10 @@ namespace WpfTest
                     }
                     joinCommand += "concat=n=" + c.ToString() + ":v=1:a=1" + '"' + " " + '"' + outStr + '"';
 
+                    File.WriteAllLines("join.txt", paths);
                     Process joinProcess = new Process();
                     joinProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
-                    //joinProcess.StartInfo.Arguments = "-y -f concat -safe 0 -i join.txt -c copy -movflags +faststart " + outStr;
+                    //joinProcess.StartInfo.Arguments = "-y -f concat -safe 0 -i join.txt -c copy " + outStr;
                     joinProcess.StartInfo.Arguments = joinCommand;
                     joinProcess.StartInfo.UseShellExecute = true;
                     joinProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
