@@ -80,7 +80,7 @@ namespace WpfTest
             _timer.Tick += new EventHandler(ticktock);
             _timer.Start();
 
-            for (int i = 0; i < 2000; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 Lines.Add(new Line { From = new System.Windows.Point(20 * i, 5 - (i % 5 == 0 ? 5 : 0)), To = new System.Windows.Point(20 * i, 10) });
             };
@@ -98,14 +98,20 @@ namespace WpfTest
                 {
                     _run = false;
                     _curSec = 0;
+                    Player.Stop();
                     Play.Source = new BitmapImage(new Uri(@"/WpfTest;component/Resources/me_play.png", UriKind.Relative));
                 }
 
-                BitmapImage shot = new BitmapImage();
-                GetFrame((int)(_capture.Fps * _curSec), shot, false);
-                VideoShow.Source = shot;
-                WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
+                ShowFrame();
             }
+        }
+
+        void ShowFrame()
+        {
+            BitmapImage shot = new BitmapImage();
+            GetFrame((int)(_capture.Fps * _curSec), shot, false);
+            VideoShow.Source = shot;
+            WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
         }
 
         void ticktock(object sender, EventArgs e)
@@ -460,6 +466,7 @@ namespace WpfTest
         {
             _curSec -= 0.5;
             TimeSlider.Value = _curSec;
+            if (!_run) ShowFrame();
             ticktock(null, null);
         }
 
@@ -467,6 +474,7 @@ namespace WpfTest
         {
             _curSec += 0.5;
             TimeSlider.Value = _curSec;
+            if (!_run) ShowFrame();
             ticktock(null, null);
         }
 
@@ -644,14 +652,11 @@ namespace WpfTest
                     var _endPos = VideoClips[i]._endPos[VideoClips[i]._endPos.Count - 1];
 
                     var clip = new VideoClipControl(_capture, _firstImage, _startPos, _endPos, _clipWidth, _timeIntervals[(int)(ZoomSlider.Value)], WaveFormData, waveFormSize, maxSpan);
+                    clip.isMute = VideoClips[i].isMute;
+                    clip.MuteMask.Visibility = clip.isMute ? Visibility.Visible : Visibility.Collapsed;
                     ClipStack.Children.Insert(i + 1, clip);
                     VideoClips.Insert(i + 1, clip);
                     VideoClips[i].UpdateEndPos(_startPos);
-                    /*
-                    var audioClip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, clip.ThumbnailControl.Width, _startPos, _endPos, _duration);
-                    WaveStack.Children.Insert(i + 1, audioClip);
-                    AudioClips.Insert(i + 1, audioClip);
-                    AudioClips[i].UpdateEndPos(_startPos, VideoClips[i].ThumbnailControl.Width);*/
                     break;
                 }
             }
@@ -730,6 +735,7 @@ namespace WpfTest
             CutLabel.RenderTransform = new TranslateTransform(x, 0);
             CutLabel.Content = GetFormatTime(sec);
             _curSec = sec;
+            if (!_run) ShowFrame();
         }
 
         private void Export_Click(object sender, RoutedEventArgs e)
@@ -739,6 +745,7 @@ namespace WpfTest
             exportDialog._videoPath = _videoFile;
             exportDialog.VideoClips = VideoClips;
             exportDialog.waveStream = WaveStream;
+            exportDialog._duration = _curDuraiton;
             exportDialog.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
             exportDialog.VerticalAlignment= System.Windows.VerticalAlignment.Top;
             exportDialog.Margin = new Thickness(0, 10, 35, 0);

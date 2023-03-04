@@ -10,6 +10,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using static WpfTest.Utils;
 
 namespace WpfTest
@@ -26,6 +27,7 @@ namespace WpfTest
         public ObservableCollection<VideoClipControl> VideoClips { get; set; }
         public WaveStream waveStream { get; set; }
         private string _ext = ".mp4";
+        public double _duration = 0.0;
 
         public ExportDialog()
         {
@@ -76,6 +78,17 @@ namespace WpfTest
             string outStr = _outputPath + '\\' + FileNameTextBox.Text + _ext;
 
             ExportingGrid.Visibility = Visibility.Visible;
+            Exporting.Maximum = (int)(_capture.Fps * _duration);
+            Exporting.Value = 0;
+
+            int exportFrameCount = 1;
+            DispatcherTimer time = new DispatcherTimer();
+            time.Interval = TimeSpan.FromMilliseconds(10);
+            time.Start();
+            time.Tick += delegate
+            {
+                Exporting.Value = exportFrameCount;
+            };
 
             List<string> paths = new List<string>();
 
@@ -133,7 +146,6 @@ namespace WpfTest
 
                     proc.Start();
 
-                    int exportFrameCount = 1;
                     for (int i = 0; i < VideoClips.Count; i++)
                     {
                         for (int j = 0; j < VideoClips[i]._startPos.Count; j++)
@@ -178,10 +190,8 @@ namespace WpfTest
             }
             finally
             {
-                for (int i = 0; i < paths.Count; i++)
-                {
-                    File.Delete(paths[i]);
-                }
+                File.Delete("output.wav");
+                time.Stop();
             }
 
             ExportingGrid.Visibility = Visibility.Collapsed;

@@ -110,7 +110,7 @@
                     <Grid Name="ExportingGrid" Grid.Row="1" Background="#AA000000" Visibility="Hidden">
                         <StackPanel Orientation="Vertical" VerticalAlignment="Center">
                             <TextBlock FontSize="20" Foreground="White" TextAlignment="Center">Exporting...</TextBlock>
-                            <ProgressBar Name="Exporting" Foreground="#544D4D" Height="10" Margin="10,10" IsIndeterminate="True"/>
+                            <ProgressBar Name="Exporting" Foreground="#544D4D" Height="10" Margin="10,10"/>
                         </StackPanel>
                     </Grid>
                 </Grid>

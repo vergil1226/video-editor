@@ -580,7 +580,7 @@
                         </Grid>
                     </Grid>
                 </Grid>
-                <Grid Grid.Row="1" Margin="30 0 30 0">
+                <Grid Grid.Row="1" Margin="30 0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
@@ -595,7 +595,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <ScrollViewer Name="TimeScroll" Grid.Row="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                            <ScrollViewer Name="TimeScroll" Grid.Row="0" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" HorizontalAlignment="Left">
                                 <ItemsControl Name="TimeControl" ItemsSource="{Binding Times}" Margin="-100,0,0,0">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -609,7 +609,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
-                            <ScrollViewer Name="LineScroll" Grid.Row="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" PreviewMouseLeftButtonDown="OnTimelineDown" Cursor="ScrollWE">
+                            <ScrollViewer Name="LineScroll" Grid.Row="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" HorizontalAlignment="Left" PreviewMouseLeftButtonDown="OnTimelineDown" Cursor="ScrollWE">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="*"/>
