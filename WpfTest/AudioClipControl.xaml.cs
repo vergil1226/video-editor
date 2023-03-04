@@ -45,7 +45,6 @@ namespace WpfTest
             endPos = _endPos;
             duration = _duration;
             DataContext = this;
-            Render();
         }
 
         private DrawingGroup drawingGroup { get; } = new DrawingGroup();
@@ -105,18 +104,6 @@ namespace WpfTest
                 }
                 drawingContext.DrawLine(pen, a, b);
             }
-        }
-
-        public void UpdateWidth(double zoomRate)
-        {
-            Width = Width * zoomRate;
-            //Render();
-        }
-
-        public void UpdateEndPos(double _endPos, double _width)
-        {
-            endPos = _endPos;
-            Width = _width;
         }
     }
 }

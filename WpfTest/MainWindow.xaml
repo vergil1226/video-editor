@@ -411,9 +411,12 @@
                         </Button.Resources>
                     </Button>
                 </Grid>
-                <Grid Grid.Row="1" Background="#0B0A0A" Margin="150,0">
-                    <Viewbox Name="MediaContainer"  Grid.Row="1">
-                        <MediaElement Name="media" MediaOpened="OnMediaOpend" LoadedBehavior="Manual" ScrubbingEnabled="True" MediaEnded="OnMediaEnded"/>
+                <Grid Name="MediaContainer" Grid.Row="1" Background="#0B0A0A" Margin="150,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Viewbox Grid.Row="0" HorizontalAlignment="Center">
+                        <Image Name="VideoShow" />
                     </Viewbox>
                 </Grid>
                 <Grid Grid.Row="2" Background="#252525" Margin="150,0">
@@ -586,8 +589,8 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="30"/>
                                 <RowDefinition Height="30"/>
-                                <RowDefinition Height="60"/>
-                                <RowDefinition Height="50"/>
+                                <RowDefinition Height="110"/>
+                                <!-- <RowDefinition Height="50"/> -->
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -631,12 +634,9 @@
                                 </Grid>
                             </ScrollViewer>
                             <StackPanel Grid.Row="2" Orientation="Vertical">
-                                <ScrollViewer Name="ClipScroll" Height="54" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="ClipMouseWheel">
+                                <ScrollViewer Name="ClipScroll" Height="114" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden" PreviewMouseWheel="ClipMouseWheel">
                                     <StackPanel Name="ClipStack" Orientation="Horizontal" HorizontalAlignment="Left" PreviewMouseLeftButtonDown="OnClipMouseDown" />
                                 </ScrollViewer>
-                            </StackPanel>
-                            <!-- <local:WaveFormViewer Grid.Row="3" x:Name="waveView" HorizontalAlignment="Left" ClipToBounds="True" Height="50" Visibility="Visible"/> -->
-                            <StackPanel Name="WaveStack" Grid.Row="3" Orientation="Horizontal">
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>

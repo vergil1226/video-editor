@@ -1,9 +1,11 @@
 ﻿using NAudio.Wave;
 using OpenCvSharp;
+using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -22,7 +24,6 @@ namespace WpfTest
         private string _outputPath = "";
         public string _videoPath;
         public ObservableCollection<VideoClipControl> VideoClips { get; set; }
-        public ObservableCollection<AudioClipControl> AudioClips { get; set; }
         public WaveStream waveStream { get; set; }
         private string _ext = ".mp4";
 
@@ -53,6 +54,7 @@ namespace WpfTest
 
         private async void OnExport(object sender, RoutedEventArgs e)
         {
+
             if (_ext == "")
             {
                 System.Windows.MessageBox.Show("Please Select Video Type!", "Program Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -72,7 +74,6 @@ namespace WpfTest
             }
 
             string outStr = _outputPath + '\\' + FileNameTextBox.Text + _ext;
-            //await FFMpegArguments.FromFileInput("C:\\1234.mp4").OutputToFile("D:\\temp.mp4", true, options => options.WithVideoBitrate(16000)).ProcessAsynchronously();
 
             ExportingGrid.Visibility = Visibility.Visible;
 
@@ -81,7 +82,7 @@ namespace WpfTest
             try
             {
                 await Task.Run(async () =>
-                {                
+                {
                     string mainCommand = "-y -i " + '"' + _videoPath + '"';
                     string vcommand = " -vf " + '"' + "select='";
                     string acommand = " -af " + '"';
@@ -100,7 +101,7 @@ namespace WpfTest
                             vcommand += str;
                             aselect += str;
 
-                            if (AudioClips[i].isMute)
+                            if (VideoClips[i].isMute)
                             {
                                 acommand += "volume=enable='" + str + "':volume=0, ";
                             }
@@ -109,7 +110,8 @@ namespace WpfTest
 
                     vcommand += "',setpts=N/FRAME_RATE/TB" + '"';
                     acommand += aselect + "',asetpts=N/SR/TB" + '"';
-                    mainCommand += vcommand + acommand + " " + '"' + outStr + '"';
+                    mainCommand += acommand + " " + "output.wav";
+                    //mainCommand += vcommand + acommand + " " + '"' + outStr + '"';
 
                     Process cutProcess = new Process();
                     cutProcess.StartInfo.FileName = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
@@ -119,6 +121,51 @@ namespace WpfTest
                     cutProcess.Start();
                     cutProcess.WaitForExit();
                     if (cutProcess.ExitCode != 0) throw new Exception($"ffmpeg.exe exited with code {cutProcess.ExitCode}");
+
+
+                    Process proc = new Process();
+                    proc.StartInfo.FileName = @"ffmpeg.exe";
+                    proc.StartInfo.Arguments = String.Format("-i output.wav -f image2pipe -framerate {1} -i pipe:.bmp -maxrate {0}k -r {1} -y {2}", 1000, _capture.Fps, '"' + outStr + '"');
+                    proc.StartInfo.UseShellExecute = false;
+                    proc.StartInfo.CreateNoWindow = true;
+                    proc.StartInfo.RedirectStandardInput = true;
+                    proc.StartInfo.RedirectStandardOutput = true;
+
+                    proc.Start();
+
+                    int exportFrameCount = 1;
+                    for (int i = 0; i < VideoClips.Count; i++)
+                    {
+                        for (int j = 0; j < VideoClips[i]._startPos.Count; j++)
+                        {
+                            for (int k = (int)(_capture.Fps * VideoClips[i]._startPos[j]); k < _capture.Fps * VideoClips[i]._endPos[j]; k++)
+                            {
+                                _capture.PosFrames = k;
+                                Mat image = new Mat();
+                                _capture.Read(image);
+                                if (image.Empty()) continue;
+
+                                Bitmap bmp = image.ToBitmap();
+                                if (exportFrameCount >= 10 && exportFrameCount < 20)
+                                {
+                                    Graphics g = Graphics.FromImage(bmp);
+                                    g.FillRectangle(System.Drawing.Brushes.Red, new Rectangle(10, 10, 200, 200));
+                                }
+
+                                using (var ms = new MemoryStream())
+                                {
+                                    bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+                                    ms.WriteTo(proc.StandardInput.BaseStream);
+                                }
+                                exportFrameCount++;
+                            }
+                        }
+                    }
+
+                    proc.StandardInput.Flush();
+                    proc.StandardInput.Close();
+                    proc.Close();
+                    proc.Dispose();
 
                     System.Windows.MessageBox.Show("Successfully Exported!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 });

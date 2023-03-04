@@ -1,4 +1,5 @@
 ﻿using NAudio.Gui;
+using NAudio.Wave;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -35,9 +36,17 @@ namespace WpfTest
         public List<double> _endPos{ get; private set; }
         public double _duration = 0;
 
+        public List<float> WaveFormData { get; private set; }
+        private int waveFormSize = 0;
+        private double maxSpan = 0.0;
+
         public ObservableCollection<BitmapImage> Thumbnails { get; set; }
 
-        public VideoClipControl(VideoCapture capture, BitmapImage firstImage, double startPos, double endPos, double clipWidth, int timeInterval)
+        private int initID = 0;
+
+        public bool isMute = false;
+
+        public VideoClipControl(VideoCapture capture, BitmapImage firstImage, double startPos, double endPos, double clipWidth, int timeInterval, List<float> _WaveFormData, int _waveFormSize, double _maxSpan)
         {
             InitializeComponent();
             Thumbnails = new ObservableCollection<BitmapImage>();
@@ -49,8 +58,13 @@ namespace WpfTest
             _clipWidth = clipWidth;
             _firstImage = firstImage;
             _timeInterval = timeInterval;
+
+            WaveFormData = _WaveFormData;
+            waveFormSize = _waveFormSize;
+            maxSpan = _maxSpan;
+
             DataContext = this;
-            InitClip();
+            InitClip(0);
         }
 
 
@@ -58,7 +72,7 @@ namespace WpfTest
         private int syncPosId = 0;
         private int syncThumbId = 0;
         private double clipSec = 0;
-        private void InitClip()
+        private void InitClip(int curID)
         {
             _duration = 0;
             for (int i = 0; i < _startPos.Count; i++)
@@ -71,26 +85,35 @@ namespace WpfTest
             Thumbnails.Clear();
             for (int i = 0; i < length; i++)
             {
+                if (curID != initID) return;
                 Thumbnails.Add(_firstImage);
             }
+
+            AudioStack.Children.Clear();
 
             syncPos = _startPos[0] + clipSec / 2;
             syncPosId = 0;
             syncThumbId = 0;
-            SyncThumbnails(length);
+            SyncThumbnails(length, curID);
         }
 
-        private void SyncThumbnails(int length)
+        private void SyncThumbnails(int length, int curID)
         {
             for (int i = 0; i < length; i++)
             {
+                if (curID != initID) return;
+                int ti = i;
                 DispatcherTimer time = new DispatcherTimer();
-                time.Interval = TimeSpan.FromMilliseconds(10);
+                time.Interval = TimeSpan.FromMilliseconds(1);
                 time.Start();
                 time.Tick += async delegate
                 {
-                    await SyncOne(length);
                     time.Stop();
+                    if (curID != initID) return;
+                    await SyncOne(length);
+                    double interval = (_endPos[0] - _startPos[0]) / length;
+                    var audioClip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, ThumbnailControl.Width / length, _startPos[0] + ti * interval, _startPos[0] + (ti + 1) * interval, _capture.FrameCount / _capture.Fps);
+                    AudioStack.Children.Add(audioClip);
                 };
             }
         }
@@ -126,7 +149,8 @@ namespace WpfTest
 
         public void SetTimeInterval(int interval) {
             _timeInterval = interval;
-            InitClip();
+            initID++;
+            InitClip(initID);
         }
         
         public void UpdateEndPos(double pos)
@@ -159,7 +183,9 @@ namespace WpfTest
                 _duration += _endPos[i] - _startPos[i];
             }
 
-            ThumbnailControl.Width = 200.0 / _timeInterval * _duration;
+            //ThumbnailControl.Width = 200.0 / _timeInterval * _duration;
+            //AudioStack.Width = ThumbnailControl.Width;
+            InitClip(++initID);
         }
 
         public double GetCurrentSec(double pos)
