@@ -221,13 +221,9 @@ namespace WpfTest
 
             double sec = _curSec;
 
-            if (ClipStack.Children.Count > 0 && ClipStack.ActualWidth > 0)
-            {
-                double value = _curDuraiton * (_cutlinePosX + TimeLineScroll.HorizontalOffset) / ClipStack.ActualWidth;
-                TimeSlider.Value = value;
-                Text1.Text = GetFormatTime(value);
-                CutLabel.Content = GetFormatTime(value);
-            }
+            TimeSlider.Value = _curSec;
+            Text1.Text = GetFormatTime(sec);
+            CutLabel.Content = GetFormatTime(sec);
 
             if (CutButton.IsMouseCaptured) return;
 
@@ -255,14 +251,14 @@ namespace WpfTest
                 break;
             }
 
-            if (_cutlinePosX < 0)
+            /*if (_cutlinePosX < 0)
             {
                 _cutlinePosX = 0;
             }
             if (_cutlinePosX > TimeLineScroll.ActualWidth)
             {
                 _cutlinePosX = TimeLineScroll.ActualWidth;
-            }
+            }*/
 
             TranslateTransform _transform = new TranslateTransform(_cutlinePosX, 0);
             CutButton.RenderTransform = _transform;
@@ -467,22 +463,7 @@ namespace WpfTest
             int tt = (int)t;
             return (tt / 3600).ToString("D2") + ":" + ((tt % 3600) / 60).ToString("D2") + ":" + (tt % 60).ToString("D2") + ":" + (((int)(t * 100)) % 100).ToString("D2");
         }
-        /*
-        private void OnMediaOpend(object sender, RoutedEventArgs e)
-        {
-            _position = media.NaturalDuration.TimeSpan;
-            TimeSlider.Minimum = 0;
-            TimeSlider.Maximum = _position.TotalSeconds;
-        }
 
-        private void OnMediaEnded(object sender, RoutedEventArgs e)
-        {
-            mediaElement.Position = new TimeSpan(0, 0, 0, 1, 0);
-            _run = false; media.Stop();
-            Play.Source = new BitmapImage(new Uri(@"/WpfTest;component/Resources/me_play.png", UriKind.Relative));
-            TimeLineScroll.ScrollToHome();
-        }
-        */
         private void Button_Play(object sender, RoutedEventArgs e)
         {
             _run = !_run;
@@ -699,6 +680,13 @@ namespace WpfTest
             if (TimeSlider.IsMouseCaptured)
             {
                 TimeSlider.ReleaseMouseCapture();
+                ticktock(null, null);
+                if (_cutlinePosX < 0 || _cutlinePosX > TimeLineScroll.ActualWidth)
+                {
+                    _cutlinePosX = TimeLineScroll.ActualWidth / 2;
+                    TimeLineScroll.ScrollToHorizontalOffset(_curSec / _curDuraiton * TimeScroll.Width - TimeLineScroll.ActualWidth / 2);
+                    ticktock(null, null);
+                }
             }
         }
 
