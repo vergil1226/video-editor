@@ -124,6 +124,7 @@ namespace WpfTest
                 await SyncOne(length);
                 double interval = (_endPos[0] - _startPos[0]) / length;
                 var audioClip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, ThumbnailControl.Width / length, _startPos[0] + i * interval, _startPos[0] + (i + 1) * interval, _capture.FrameCount / _capture.Fps);
+                if (curID != initID) return;
                 AudioStack.Children.Add(audioClip);
                 await Task.Delay(10);
             }

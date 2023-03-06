@@ -255,6 +255,15 @@ namespace WpfTest
                 break;
             }
 
+            if (_cutlinePosX < 0)
+            {
+                _cutlinePosX = 0;
+            }
+            if (_cutlinePosX > TimeLineScroll.ActualWidth)
+            {
+                _cutlinePosX = TimeLineScroll.ActualWidth;
+            }
+
             TranslateTransform _transform = new TranslateTransform(_cutlinePosX, 0);
             CutButton.RenderTransform = _transform;
             CutLine.RenderTransform = _transform;
