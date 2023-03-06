@@ -4,6 +4,7 @@ using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -139,30 +140,31 @@ namespace WpfTest
                 syncPosId++;
             }
 
-            BitmapImage bitmapimage = new BitmapImage();
-            await GetFrame((int)(_capture.Fps * syncPos), bitmapimage);
             if (syncThumbId >= Thumbnails.Count) return;
-            Thumbnails[syncThumbId] = bitmapimage;
+            Thumbnails[syncThumbId] = await GetFrame((int)(_capture.Fps * syncPos));
             syncThumbId++;
             syncPos += clipSec;
         }
 
-        private async Task GetFrame(int pos, BitmapImage bitmapimage)
+        private async Task<BitmapImage> GetFrame(int pos)
         {
+            BitmapImage bitmapImage = new BitmapImage();
             await Task.Run(() =>
             {
+                _capture.PosFrames = pos;
+                Mat _image = new Mat();
+                _capture.Read(_image);
+                if (_image.Empty()) return;
+                MemoryStream ms = _image.Resize(new OpenCvSharp.Size(_clipWidth, 50)).ToMemoryStream();
                 this.Dispatcher.Invoke((Action)(() =>
                 {
-                    _capture.PosFrames = pos;
-                    Mat _image = new Mat();
-                    _capture.Read(_image);
-                    if (_image.Empty()) return;
-                    bitmapimage.BeginInit();
-                    bitmapimage.StreamSource = _image.Resize(new OpenCvSharp.Size(_clipWidth, 50)).ToMemoryStream();
-                    bitmapimage.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmapimage.EndInit();
+                    bitmapImage.BeginInit();
+                    bitmapImage.StreamSource = ms;
+                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmapImage.EndInit();
                 }));
             });
+            return bitmapImage;
         }
 
         public async Task SetTimeInterval(int interval) {

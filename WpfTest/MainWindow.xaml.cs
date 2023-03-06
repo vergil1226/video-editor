@@ -157,40 +157,33 @@ namespace WpfTest
             }
         }
 
-        private async void PlayVideo()
+        private void PlayVideo()
         {
-            await Task.Run(async () =>
+            while (true)
             {
-                while (true)
+                if (_threadClose) return;
+                if (_run)
                 {
-                    if (_threadClose) return;
-                    if (_run)
-                    {
-                        long t = stopwatch.ElapsedMilliseconds;
-                        if (_prevWatch == -1) _prevWatch = t;
-                        _curSec += (t - _prevWatch) / 1000.0;
-                        _prevWatch = t;
+                    long t = stopwatch.ElapsedMilliseconds;
+                    if (_prevWatch == -1) _prevWatch = t;
+                    _curSec += (t - _prevWatch) / 1000.0;
+                    _prevWatch = t;
 
-                        await ShowFrame();
-                        Cv2.WaitKey((int)(1000 / _captureForPlay.Fps));
-                    }
-                    //await Task.Delay(40);
+                    ShowFrame();
+                    Cv2.WaitKey((int)(1000 / _captureForPlay.Fps));
                 }
-            });
+            }
         }
 
-        private async Task ShowFrame()
+        private void ShowFrame()
         {
-            await Task.Run(() =>
+            this.Dispatcher.Invoke((Action)(() =>
             {
-                this.Dispatcher.Invoke((Action)(() =>
-                {
-                    BitmapImage shot = new BitmapImage();
-                    GetFrame((int)(_captureForPlay.Fps * _curSec), shot, false);
-                    VideoShow.Source = shot;
-                    WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
-                }));
-            });
+                BitmapImage shot = new BitmapImage();
+                GetFrame((int)(_captureForPlay.Fps * _curSec), shot, false);
+                VideoShow.Source = shot;
+                WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
+            }));
         }
 
         private void GetFrame(int pos, BitmapImage bitmapimage, bool isFirst)
