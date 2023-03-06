@@ -1,6 +1,7 @@
 ﻿using NAudio.Gui;
 using NAudio.Wave;
 using OpenCvSharp;
+using OpenCvSharp.XFeatures2D;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -122,16 +123,15 @@ namespace WpfTest
             for (int i = 0; i < length; i++)
             {
                 if (curID != initID) return;
-                await SyncOne(length);
+                await SyncOne(length, curID);
                 double interval = (_endPos[0] - _startPos[0]) / length;
                 var audioClip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, ThumbnailControl.Width / length, _startPos[0] + i * interval, _startPos[0] + (i + 1) * interval, _capture.FrameCount / _capture.Fps);
                 if (curID != initID) return;
                 AudioStack.Children.Add(audioClip);
-                await Task.Delay(10);
             }
         }
 
-        private async Task SyncOne(int length)
+        private async Task SyncOne(int length, int curID)
         {
             if (syncPos > _endPos[syncPosId])
             {
@@ -142,6 +142,7 @@ namespace WpfTest
 
             if (syncThumbId >= Thumbnails.Count) return;
             Thumbnails[syncThumbId] = await GetFrame((int)(_capture.Fps * syncPos));
+            if (curID != initID) return;
             syncThumbId++;
             syncPos += clipSec;
         }
