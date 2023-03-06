@@ -99,6 +99,7 @@ namespace WpfTest
 
         private async Task SyncThumbnails(int length, int curID)
         {
+            /*
             for (int i = 0; i < length; i++)
             {
                 if (curID != initID) return;
@@ -115,6 +116,16 @@ namespace WpfTest
                     var audioClip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, ThumbnailControl.Width / length, _startPos[0] + ti * interval, _startPos[0] + (ti + 1) * interval, _capture.FrameCount / _capture.Fps);
                     AudioStack.Children.Add(audioClip);
                 };
+            }
+            */
+            for (int i = 0; i < length; i++)
+            {
+                if (curID != initID) return;
+                await SyncOne(length);
+                double interval = (_endPos[0] - _startPos[0]) / length;
+                var audioClip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, ThumbnailControl.Width / length, _startPos[0] + i * interval, _startPos[0] + (i + 1) * interval, _capture.FrameCount / _capture.Fps);
+                AudioStack.Children.Add(audioClip);
+                await Task.Delay(10);
             }
         }
 
@@ -137,14 +148,20 @@ namespace WpfTest
 
         private async Task GetFrame(int pos, BitmapImage bitmapimage)
         {
-            _capture.PosFrames = pos;
-            Mat _image = new Mat();
-            _capture.Read(_image);
-            if (_image.Empty()) return;
-            bitmapimage.BeginInit();
-            bitmapimage.StreamSource = _image.Resize(new OpenCvSharp.Size(_clipWidth, 50)).ToMemoryStream();
-            bitmapimage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapimage.EndInit();
+            await Task.Run(() =>
+            {
+                this.Dispatcher.Invoke((Action)(() =>
+                {
+                    _capture.PosFrames = pos;
+                    Mat _image = new Mat();
+                    _capture.Read(_image);
+                    if (_image.Empty()) return;
+                    bitmapimage.BeginInit();
+                    bitmapimage.StreamSource = _image.Resize(new OpenCvSharp.Size(_clipWidth, 50)).ToMemoryStream();
+                    bitmapimage.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmapimage.EndInit();
+                }));
+            });
         }
 
         public async Task SetTimeInterval(int interval) {

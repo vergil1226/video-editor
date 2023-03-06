@@ -171,22 +171,26 @@ namespace WpfTest
                         _curSec += (t - _prevWatch) / 1000.0;
                         _prevWatch = t;
 
-                        ShowFrame();
+                        await ShowFrame();
+                        Cv2.WaitKey((int)(1000 / _captureForPlay.Fps));
                     }
-                    await Task.Delay(10);
+                    //await Task.Delay(40);
                 }
             });
         }
 
-        private void ShowFrame()
+        private async Task ShowFrame()
         {
-            this.Dispatcher.Invoke((Action)(() =>
+            await Task.Run(() =>
             {
-                BitmapImage shot = new BitmapImage();
-                GetFrame((int)(_captureForPlay.Fps * _curSec), shot, false);
-                VideoShow.Source = shot;
-                WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
-            }));
+                this.Dispatcher.Invoke((Action)(() =>
+                {
+                    BitmapImage shot = new BitmapImage();
+                    GetFrame((int)(_captureForPlay.Fps * _curSec), shot, false);
+                    VideoShow.Source = shot;
+                    WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
+                }));
+            });
         }
 
         private void GetFrame(int pos, BitmapImage bitmapimage, bool isFirst)
@@ -551,6 +555,7 @@ namespace WpfTest
             for (int i = 0; i < VideoClips.Count; i++)
             {
                 await VideoClips[i].SetTimeInterval(_timeIntervals[(int)(ZoomSlider.Value)]);
+                await Task.Delay(100);
             }
         }
 
