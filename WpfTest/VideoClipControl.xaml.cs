@@ -72,7 +72,7 @@ namespace WpfTest
         private int syncPosId = 0;
         private int syncThumbId = 0;
         private double clipSec = 0;
-        private void InitClip(int curID)
+        private async Task InitClip(int curID)
         {
             _duration = 0;
             for (int i = 0; i < _startPos.Count; i++)
@@ -94,10 +94,10 @@ namespace WpfTest
             syncPos = _startPos[0] + clipSec / 2;
             syncPosId = 0;
             syncThumbId = 0;
-            SyncThumbnails(length, curID);
+            await SyncThumbnails(length, curID);
         }
 
-        private void SyncThumbnails(int length, int curID)
+        private async Task SyncThumbnails(int length, int curID)
         {
             for (int i = 0; i < length; i++)
             {
@@ -147,13 +147,13 @@ namespace WpfTest
             bitmapimage.EndInit();
         }
 
-        public void SetTimeInterval(int interval) {
+        public async Task SetTimeInterval(int interval) {
             _timeInterval = interval;
             initID++;
-            InitClip(initID);
+            await InitClip(initID);
         }
         
-        public void UpdateEndPos(double pos)
+        public async void UpdateEndPos(double pos)
         {
             int i;
             for (i = _endPos.Count - 1; i >= 0; i--)
@@ -185,7 +185,7 @@ namespace WpfTest
 
             //ThumbnailControl.Width = 200.0 / _timeInterval * _duration;
             //AudioStack.Width = ThumbnailControl.Width;
-            InitClip(++initID);
+            await InitClip(++initID);
         }
 
         public double GetCurrentSec(double pos)

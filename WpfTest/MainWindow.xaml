@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="Video Editor" MinHeight="600" MinWidth="600" Height="720" Width="1200" Background="#252525" WindowStyle="None" ScrollViewer.VerticalScrollBarVisibility="Disabled"
         ResizeMode="CanResizeWithGrip" AllowsTransparency="True"
-        WindowStartupLocation="CenterScreen" KeyDown="FormKeyDown" PreviewKeyUp="FormKeyUp">
+        WindowStartupLocation="CenterScreen" KeyDown="FormKeyDown" PreviewKeyUp="FormKeyUp" Closing="OnClosing">
     <Window.Resources>
         <Style TargetType="Button">
             <Setter Property="OverridesDefaultStyle" Value="True" />
@@ -462,9 +462,8 @@
                         </StackPanel>
                     </Button>
                     <Slider Name="TimeSlider" Grid.Column="4" Background="Transparent" 
-                            Value="{Binding Path=Volume, Mode=TwoWay, ElementName=media}"
                             Foreground="#FFFFFF" Margin="0,7,0,0" 
-                            BorderThickness="0" Maximum="100" LargeChange="5" SmallChange="1" PreviewMouseLeftButtonUp="TimeSliderLButtonUp" IsEnabled="False"/>
+                            BorderThickness="0" Maximum="100" LargeChange="5" SmallChange="1" PreviewMouseLeftButtonUp="OnTimeSliderLButtonUp" PreviewMouseLeftButtonDown="OnTimeSliderLButtonDown" PreviewMouseMove="OnTimeSliderMouseMove" />
                     <Button Grid.Column="5" Background="Transparent" 
                             Foreground="#FFFFFF" Margin="0 0 0 0" 
                             BorderThickness="0">
