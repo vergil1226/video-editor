@@ -42,7 +42,7 @@
                     <RowDefinition Height="25"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <StackPanel Grid.Row="0" HorizontalAlignment="Right">
+                <StackPanel Grid.Row="0" HorizontalAlignment="Right" Visibility="Hidden">
                     <Button x:Name="CancelImport"  Height="20" Width="50" BorderThickness="0" Background="Transparent"
                         Style="{StaticResource MyButton}"
                         Click="CancelImport_Click">

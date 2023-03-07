@@ -100,13 +100,6 @@ namespace WpfTest
             openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
             if (openFileDialog.ShowDialog() == true)
             {
-                m_toolbar.Visibility = Visibility.Hidden;
-                mediaEditWindow.Visibility = Visibility.Visible;
-                mediaInputWindow.Visibility = Visibility.Hidden;
-
-                mediaInputTimeline.Visibility = Visibility.Hidden;
-                mediaEditTimeline.Visibility = Visibility.Visible;
-
                 BgGrid.Children.Add(new ImportingModalDialog());
                 DispatcherTimer time = new DispatcherTimer();
                 time.Interval = TimeSpan.FromMilliseconds(100);
@@ -119,6 +112,7 @@ namespace WpfTest
                     _capture = new VideoCapture(_videoFile);
                     _captureForPlay = new VideoCapture(_videoFile);
                     _mediaLoaded = true;
+                    _threadClose = true;
 
                     _clipWidth = 50 * _capture.FrameWidth / _capture.FrameHeight;
                     _duration = _capture.FrameCount / _capture.Fps;
@@ -137,7 +131,9 @@ namespace WpfTest
                     }
                     ZoomSlider.Value = Math.Min(mi + 1, 9);
 
-                    GetFrame(0, _firstImage, true);
+                    BitmapImage _First = new BitmapImage();
+                    GetFrame(0, _First, true);
+                    _firstImage = _First;
                     InitWidth();
                     await ConvertLoad();
                     BgGrid.Children.Clear();
@@ -148,9 +144,12 @@ namespace WpfTest
                     GetFrame(0, _first, false);
                     VideoShow.Source = _first;
 
-//                     _player.Interval = TimeSpan.FromMilliseconds(10);
-//                     _player.Tick += new EventHandler(PlayVideo);
-//                     _player.Start();
+                    m_toolbar.Visibility = Visibility.Hidden;
+                    mediaEditWindow.Visibility = Visibility.Visible;
+                    mediaInputWindow.Visibility = Visibility.Hidden;
+
+                    mediaInputTimeline.Visibility = Visibility.Hidden;
+                    mediaEditTimeline.Visibility = Visibility.Visible;
 
                     new Thread(new ThreadStart(PlayVideo)).Start();
                 };

@@ -5,6 +5,7 @@ using OpenCvSharp.XFeatures2D;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -69,11 +70,6 @@ namespace WpfTest
             InitClip(0);
         }
 
-
-        private double syncPos = 0;
-        private int syncPosId = 0;
-        private int syncThumbId = 0;
-        private double clipSec = 0;
         private async Task InitClip(int curID)
         {
             _duration = 0;
@@ -82,7 +78,6 @@ namespace WpfTest
                 _duration += _endPos[i] - _startPos[i];
             }
             ThumbnailControl.Width = 200.0 / _timeInterval * _duration;
-            clipSec = _clipWidth * _timeInterval / 200.0;
             int length = (int)(ThumbnailControl.Width / _clipWidth) + 1;
             Thumbnails.Clear();
             for (int i = 0; i < length; i++)
@@ -93,78 +88,37 @@ namespace WpfTest
 
             AudioStack.Children.Clear();
 
-            syncPos = _startPos[0] + clipSec / 2;
-            syncPosId = 0;
-            syncThumbId = 0;
             await SyncThumbnails(length, curID);
         }
 
         private async Task SyncThumbnails(int length, int curID)
         {
-            /*
             for (int i = 0; i < length; i++)
             {
                 if (curID != initID) return;
-                int ti = i;
-                DispatcherTimer time = new DispatcherTimer();
-                time.Interval = TimeSpan.FromMilliseconds(1);
-                time.Start();
-                time.Tick += async delegate
-                {
-                    time.Stop();
-                    if (curID != initID) return;
-                    await SyncOne(length);
-                    double interval = (_endPos[0] - _startPos[0]) / length;
-                    var audioClip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, ThumbnailControl.Width / length, _startPos[0] + ti * interval, _startPos[0] + (ti + 1) * interval, _capture.FrameCount / _capture.Fps);
-                    AudioStack.Children.Add(audioClip);
-                };
-            }
-            */
-            for (int i = 0; i < length; i++)
-            {
-                if (curID != initID) return;
-                await SyncOne(length, curID);
                 double interval = (_endPos[0] - _startPos[0]) / length;
+                double pos = (_startPos[0] + interval * i + interval / 2) * _capture.Fps;
+                await Task.Delay(50);
+                if (curID != initID) return;
+                Thumbnails[i] = GetFrame((int)pos);
                 var audioClip = new AudioClipControl(WaveFormData, waveFormSize, maxSpan, ThumbnailControl.Width / length, _startPos[0] + i * interval, _startPos[0] + (i + 1) * interval, _capture.FrameCount / _capture.Fps);
                 if (curID != initID) return;
                 AudioStack.Children.Add(audioClip);
             }
         }
 
-        private async Task SyncOne(int length, int curID)
-        {
-            if (syncPos > _endPos[syncPosId])
-            {
-                if (syncPosId + 1 >= _startPos.Count) return;
-                syncPos = _startPos[syncPosId + 1] + syncPos - _endPos[syncPosId];
-                syncPosId++;
-            }
-
-            if (syncThumbId >= Thumbnails.Count) return;
-            Thumbnails[syncThumbId] = await GetFrame((int)(_capture.Fps * syncPos));
-            if (curID != initID) return;
-            syncThumbId++;
-            syncPos += clipSec;
-        }
-
-        private async Task<BitmapImage> GetFrame(int pos)
+        private BitmapImage GetFrame(int pos)
         {
             BitmapImage bitmapImage = new BitmapImage();
-            await Task.Run(() =>
-            {
-                _capture.PosFrames = pos;
-                Mat _image = new Mat();
-                _capture.Read(_image);
-                if (_image.Empty()) return;
-                MemoryStream ms = _image.Resize(new OpenCvSharp.Size(_clipWidth, 50)).ToMemoryStream();
-                this.Dispatcher.Invoke((Action)(() =>
-                {
-                    bitmapImage.BeginInit();
-                    bitmapImage.StreamSource = ms;
-                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmapImage.EndInit();
-                }));
-            });
+            _capture.PosFrames = pos;
+            Mat _image = new Mat();
+            _capture.Read(_image);
+            if (_image.Empty()) return bitmapImage;
+            MemoryStream ms = _image.Resize(new OpenCvSharp.Size(_clipWidth, 50)).ToMemoryStream();
+            bitmapImage.BeginInit();
+            bitmapImage.StreamSource = ms;
+            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+            bitmapImage.EndInit();
             return bitmapImage;
         }
 
@@ -172,6 +126,7 @@ namespace WpfTest
             _timeInterval = interval;
             initID++;
             await InitClip(initID);
+            await Task.Delay(100);
         }
         
         public async void UpdateEndPos(double pos)

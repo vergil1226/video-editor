@@ -28,12 +28,12 @@ namespace Video_Editor
 
         private void Rectangle_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            this.Visibility = Visibility.Collapsed;
+            //this.Visibility = Visibility.Collapsed;
         }
 
         private void CancelImport_Click(object sender, RoutedEventArgs e)
         {
-            this.Visibility = Visibility.Collapsed;
+            //this.Visibility = Visibility.Collapsed;
         }
     }
 }
