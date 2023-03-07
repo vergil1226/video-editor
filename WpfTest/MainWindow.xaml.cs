@@ -112,7 +112,6 @@ namespace WpfTest
                     _capture = new VideoCapture(_videoFile);
                     _captureForPlay = new VideoCapture(_videoFile);
                     _mediaLoaded = true;
-                    _threadClose = true;
 
                     _clipWidth = 50 * _capture.FrameWidth / _capture.FrameHeight;
                     _duration = _capture.FrameCount / _capture.Fps;
