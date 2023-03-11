@@ -20,6 +20,7 @@ using Video_Editor;
 using static WpfTest.VideoDecoderNative;
 using static WpfTest.Utils;
 using System.Text;
+using System.Drawing.Drawing2D;
 
 namespace WpfTest
 {
@@ -38,18 +39,13 @@ namespace WpfTest
     {
         private VideoCapture _capture;
         private VideoCapture _captureForPlay;
-        private VideoCapture _playerCapture;
-        object mut = new object();
-        object mut2 = new object();
-        Queue<BitmapImage> _framesQueue = new Queue<BitmapImage>();
-        Queue<Mat> _matQueue = new Queue<Mat>();
-        DispatcherTimer _timer = new DispatcherTimer();
-        DispatcherTimer _player= new DispatcherTimer();
+        DispatcherTimer _timer  = new DispatcherTimer();
+        DispatcherTimer _player = new DispatcherTimer();
         BitmapImage _firstImage = new BitmapImage();
-        BitmapImage _curImage = new BitmapImage();
+        BitmapImage _curImage   = new BitmapImage();
         long _curPts = 0;
         private bool _run = false, _fullscreen = false, _altPressed = false, _mute = false, _maximize = false, _mediaLoaded = false;
-        private double _clipWidth, _cutlinePosX, _duration, _curDuraiton, _curSec = 0.0;
+        private double _clipWidth, _cutlinePosX, _duration, _curDuraiton, _curSec = 0.0, _seekTime = -1.0;
         private System.Windows.Point _positionInBlock;
         private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 5 };
         private string _videoFile = "";
@@ -121,8 +117,6 @@ namespace WpfTest
                     _videoFile = openFileDialog.FileName;
                     _capture = new VideoCapture(_videoFile);
                     _captureForPlay = new VideoCapture(_videoFile);
-                    _playerCapture = new VideoCapture(_videoFile);
-                    _playerCapture.Set(VideoCaptureProperties.BufferSize, 4);
                     _mediaLoaded = true;
 
                     _clipWidth = 50 * _capture.FrameWidth / _capture.FrameHeight;
@@ -150,7 +144,6 @@ namespace WpfTest
                     BgGrid.Children.Clear();
 
                     stopwatch = new Stopwatch();
-                    stopwatch.Start();
                     BitmapImage _first = new BitmapImage();
                     GetFrame(_captureForPlay, 0, _first, false);
                     VideoShow.Source = _first;
@@ -161,144 +154,112 @@ namespace WpfTest
 
                     mediaInputTimeline.Visibility = Visibility.Hidden;
                     mediaEditTimeline.Visibility = Visibility.Visible;
-
-                    //new Thread(new ThreadStart(PlayVideo)).Start();
-                    //new Thread(new ThreadStart(ConvertMat)).Start();
-                    //new Thread(new ThreadStart(ConvertMat)).Start();
+                    _decoder.stop();
                     _decoder.setUrl(_videoFile);
                     _decoder.start();
-                    ShowPlayed();
+                    _threadClose = false;
+                    new Thread(new ThreadStart(ShowPlayed)).Start();
                 };
             }
         }
 
-        private void PlayVideo()
+        private void ShowPlayed()
         {
-            while (true)
-            {
-                if (_threadClose) return;
-                if (_run)
+            Stopwatch tm = new Stopwatch();
+            long oldStp = 0;
+            bool setaudio = false;
+            bool showOne = false;
+            while (!_threadClose) {
+                if(_seekTime >= 0.0)
                 {
-                    long t = stopwatch.ElapsedMilliseconds;
-                    if(decodeProcess() != 0)
+                    _decoder.seek(_seekTime);
+                    oldStp = (long)(_seekTime*1000);
+                    _curPts = (long)(_seekTime * _captureForPlay.Fps);
+                    if (_run)
+                        tm.Restart();
+                    else
                     {
-                        int wd = (int)((1000 / _captureForPlay.Fps) - (stopwatch.ElapsedMilliseconds - t));
-                        if (wd > 0)
-                            Cv2.WaitKey(wd);
+                        tm.Stop();
+                        showOne = true;
+                    }
+                    _seekTime = -1.0;
+                    setaudio = true;
+                }
+                if (_run || showOne)
+                {
+                    if(showOne)
+                    {
+                        if (_decoder.getCurFrame(ref _curImage) == 0)
+                        {
+                            _curImage.Freeze();
+                            Dispatcher.Invoke((Action)(() =>
+                            {
+                                VideoShow.Source = _curImage;
+                                _curSec = _curPts / _captureForPlay.Fps;
+                                if (setaudio)
+                                {
+                                    WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
+                                    setaudio = false;
+                                }
+                                
+                                _curPts += 1;
+                            }));
+                            showOne = false;
+                        }
                         else
                         {
-                            Cv2.WaitKey(1);
+                            if (_decoder.isEnd())
+                            {
+                                Thread.Sleep((int)20);
+                                showOne = false;
+                            }
+                        }
+                        continue;
+                    }
+                    if(!tm.IsRunning)
+                    {
+                        tm.Restart();
+                    }
+                    long curSec = oldStp + tm.ElapsedMilliseconds;
+                    long delay = (long)(_curPts * 1000 / _captureForPlay.Fps) - curSec;
+                    if (delay > 0)
+                    {
+                        Thread.Sleep((int)delay);
+                    }
+
+                    if (_decoder.getCurFrame(ref _curImage) == 0)
+                    {
+                        _curImage.Freeze();
+                        Dispatcher.Invoke((Action)(() =>
+                        {
+                            VideoShow.Source = _curImage;
+                            _curPts += 1;
+                            _curSec = _curPts / _captureForPlay.Fps;
+                            if(setaudio)
+                            {
+                                WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
+                                setaudio = false;
+                            }
+                        }));
+                    } else
+                    {
+                        if(_decoder.isEnd())
+                        {
+                            Thread.Sleep((int)20);
                         }
                     }
                 } else
                 {
-                    Thread.Sleep(30);
-                }
-            }
-        }
-
-        private int decodeProcess()
-        {
-            lock (_framesQueue)
-            {
-                if (_framesQueue.Count >= 15)
-                    return -1;
-                else
-                {
-                    Mat _image = new Mat();
-                    _playerCapture.Read(_image);
-                    if(_image.Empty())
+                    if(tm.IsRunning)
                     {
-                        return -1;
-                    } else
-                    {
-                        lock (mut2)
-                        {
-                            _matQueue.Enqueue(_image);
-                        }
+                        oldStp += tm.ElapsedMilliseconds;
+                        tm.Stop();
                     }
-                }
-            }
-            return -1;
-        }
-
-        private async void ShowPlayed()
-        {
-            Stopwatch tm = new Stopwatch();
-            tm.Start();
-            while (_run) {
-                long delay = (long)(_curPts * 1000 / _captureForPlay.Fps) - tm.ElapsedMilliseconds;
-                if (delay > 0)
-                {
-                    await Task.Delay((int)delay);
-                }
-                else
-                {
-                    await Task.Delay(10);
-                }
-                if (_framesQueue.Count != 0)
-                {
-                    lock (mut) {
-                        _curImage = _framesQueue.Dequeue();
-                    }
-                    VideoShow.Source = _curImage;
-                    _curPts += 1;
-                    _curSec = _curPts / _captureForPlay.Fps;
+                    Thread.Sleep(10);
                 }
                 //WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
             }
-        }
-
-        private void ShowFrame(bool skip)
-        {
-            this.Dispatcher.Invoke((Action)(() =>
-            {
-                BitmapImage shot = new BitmapImage();
-                if(skip)
-                    GetFrame(_captureForPlay, (int)(_captureForPlay.Fps * _curSec), shot, false);
-                else
-                    GetFrame(_captureForPlay , -1, shot, false);
-                VideoShow.Source = shot;
-                WaveStream.CurrentTime = new TimeSpan(0, 0, 0, (int)_curSec, (int)(_curSec * 1000) % 1000);
-            }));
-        }
-
-        private void ConvertMat()
-        {
-            while (true)
-            {
-                if (_threadClose) return;
-                if (_run)
-                {
-                    Mat image = new Mat();
-                    lock (mut2)
-                    {
-                        if (_matQueue.Count != 0)
-                            image = _matQueue.Dequeue();
-                    }
-                    if (!image.Empty())
-                    {
-                        BitmapImage bm = new BitmapImage();
-                        bm.BeginInit();
-                        bm.StreamSource = image.ToMemoryStream();
-                        bm.CacheOption = BitmapCacheOption.OnLoad;
-                        bm.EndInit();
-                        bm.Freeze();
-                        lock (mut)
-                        {
-                            _framesQueue.Enqueue(bm);
-                        }
-                    }
-                    else
-                    {
-                        Thread.Sleep(5);
-                    }
-                }
-                else
-                {
-                    Thread.Sleep(5);
-                }
-            }
+            _decoder.stop();
         }
 
         private int GetFrame(VideoCapture capture, int pos, BitmapImage bitmapimage, bool isFirst)
@@ -322,13 +283,12 @@ namespace WpfTest
         {
             if (!_mediaLoaded) return;
 
-            if (_curSec > _duration)
+            if ((_duration - _curSec) < 0.00001)
             {
                 _run = false;
-                _curSec = 0;
                 Player.Stop();
+                _seekTime = 0;
                 Play.Source = new BitmapImage(new Uri(@"/WpfTest;component/Resources/me_play.png", UriKind.Relative));
-                ShowFrame(false);
             }
 
             double sec = _curSec;
@@ -347,7 +307,7 @@ namespace WpfTest
                     if (sec > VideoClips[i]._endPos[^1] && sec < VideoClips[i + 1]._startPos[0])
                     {
                         sec = VideoClips[i + 1]._startPos[0];
-                        _curSec = sec;
+                        _seekTime = sec;
                         break;
                     }
                 }
@@ -584,7 +544,6 @@ namespace WpfTest
                 _prevWatch = -1;
                 Play.Source = new BitmapImage(new Uri(@"/WpfTest;component/Resources/me_pause.png", UriKind.Relative));
                 Player.Play();
-                ShowPlayed();
             }
             else
             {
@@ -595,23 +554,21 @@ namespace WpfTest
 
         private void Button_Prev(object sender, RoutedEventArgs e)
         {
-            _curSec -= 0.5;
+            _seekTime = _curSec - 0.5;
             TimeSlider.Value = _curSec;
-            if (!_run) ShowFrame(true);
             ticktock(null, null);
         }
 
         private void Button_Forward(object sender, RoutedEventArgs e)
         {
-            _curSec += 0.5;
+            _seekTime = _curSec + 0.5;
             TimeSlider.Value = _curSec;
-            if (!_run) ShowFrame(true);
             ticktock(null, null);
         }
 
         private void TimeSliderLButtonUp(object sender, MouseButtonEventArgs e)
         {
-            _curSec = TimeSlider.Value;
+            _seekTime = TimeSlider.Value;
         }
 
         private void OnMute(object sender, RoutedEventArgs e)
@@ -778,8 +735,7 @@ namespace WpfTest
                 {
                     if (sec <= VideoClips[i]._endPos[0] - VideoClips[i]._startPos[0])
                     {
-                        _curSec = VideoClips[i]._startPos[0] + sec;
-                        ShowFrame(true);
+                        _seekTime = VideoClips[i]._startPos[0] + sec;
                         ticktock(null, null);
                         return;
                     }
@@ -907,8 +863,7 @@ namespace WpfTest
             CutLine.RenderTransform = new TranslateTransform(x, 0);
             CutLabel.RenderTransform = new TranslateTransform(x, 0);
             CutLabel.Content = GetFormatTime(sec);
-            _curSec = sec;
-            if (!_run) ShowFrame(true);
+            _seekTime = sec;
         }
 
         private void Export_Click(object sender, RoutedEventArgs e)
@@ -960,6 +915,7 @@ namespace WpfTest
 
         private void window_close(object sender, RoutedEventArgs e)
         {
+            _decoder.stop();
             Close();
         }
 

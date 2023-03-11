@@ -10,7 +10,7 @@ using System.Windows.Media.Imaging;
 using OpenCvSharp;
 namespace WpfTest
 {
-    enum BitamapState { EMPTY = 0, NEW_MAT = 1, CONVERTED = 2}
+    enum BitamapState { EMPTY = 0, NEW_MAT = 1, CONVERTED = 2, OLD = 3}
     class BitmapUnit
     {
         public BitmapUnit() {
@@ -24,7 +24,7 @@ namespace WpfTest
 
     class CircleBitmapArray
     {
-        private BitmapUnit[] _frameBuff = new BitmapUnit[10];
+        private BitmapUnit[] _frameBuff = new BitmapUnit[6];
         private int _curItem = 0;
         private int _lastItem = 0;
         private int _convertItem = 0;
@@ -32,13 +32,17 @@ namespace WpfTest
 
         public CircleBitmapArray()
         {
-            for(int i = 0; i < 10; ++i)
+            for(int i = 0; i < 6; ++i)
             {
                 _frameBuff[i] = new BitmapUnit();
             }
         }
         public int reserveForConvert()
         {
+            if (_convertItem == _lastItem)
+            {
+                return -1;
+            }
             lock (_mut)
             {
                 if (_convertItem == _lastItem)
@@ -48,7 +52,7 @@ namespace WpfTest
                 else
                 {
                     int res = _convertItem;
-                    _convertItem = (_convertItem + 1) % 10;
+                    _convertItem = (_convertItem + 1) % 6;
                     return res;
                 }
             }
@@ -64,9 +68,16 @@ namespace WpfTest
             if (_frameBuff[_curItem].state == BitamapState.CONVERTED)
             {
                 shot = _frameBuff[_curItem].shot.Clone();
+                //_frameBuff[_curItem].state = BitamapState.OLD;
+                pop();
                 return 0;
             }
             return -1;
+        }
+
+        public BitamapState getCurItemState()
+        {
+            return _frameBuff[_curItem].state;
         }
 
         public int getSize()
@@ -76,7 +87,7 @@ namespace WpfTest
                 return _lastItem - _curItem;
             } else
             {
-                return _curItem - _lastItem;
+                return 6 - (_curItem - _lastItem);
             }
         }
 
@@ -84,22 +95,19 @@ namespace WpfTest
         {
             lock(_mut)
             {
-                if (getSize() == 9)
+                if (getSize() == 5)
                     return -1;
                 _frameBuff[_lastItem].frame = shot;
                 _frameBuff[_lastItem].state = BitamapState.NEW_MAT;
-                _lastItem = (_lastItem + 1) % 10;
+                _lastItem = (_lastItem + 1) % 6;
                 return 0;
             }
         }
 
         public void pop()
         {
-            lock (_mut)
-            {
-                _frameBuff[_curItem].state = BitamapState.EMPTY;
-                _curItem = (_curItem + 1) % 10;
-            }
+            _frameBuff[_curItem].state = BitamapState.EMPTY;
+            Interlocked.Exchange(ref _curItem, (_curItem + 1) % 6);
         }
 
         public void clear()
@@ -116,12 +124,12 @@ namespace WpfTest
         private VideoCapture _videoCapture = new VideoCapture();
         int _convertThreadCount = 3;
         int _threadWaitCount = 0;
+        int _threadEnd = 0;
         private CircleBitmapArray _frameBuff = new CircleBitmapArray();
         bool _stop = true;
         bool _seek = false;
         bool _isEnd = false;
         readonly object _wait = new object();
-        
         public VideoDecoderNative()
         {   
         }
@@ -142,17 +150,32 @@ namespace WpfTest
 
         public void stop()
         {
+            if (_stop)
+                return;
             _stop = true;
+            while (_threadEnd != _convertThreadCount + 1)
+            {
+                Thread.Sleep(20);
+            }
+            _threadEnd = 0;
+            _frameBuff.clear();
         }
 
-        public void seek(int _curTime)
+        public void seek(double _curTime)
         {
             _seek = true;
-            while(_threadWaitCount != _threadWaitCount + 1)
+            while(_threadWaitCount != _convertThreadCount + 1)
             {
-                Thread.Sleep(5);
-                _videoCapture.PosFrames = (int)(_curTime * _videoCapture.Fps / 1000.0 );
-                _frameBuff.clear();
+                Thread.Sleep(20);
+            }
+            _videoCapture.PosFrames = (int)(_curTime * _videoCapture.Fps);
+            _frameBuff.clear();
+            _threadWaitCount = 0;
+            _seek = false;
+            _isEnd = false;
+            lock (_wait)
+            {
+                Monitor.PulseAll(_wait);
             }
         }
 
@@ -170,7 +193,13 @@ namespace WpfTest
                 }
                 else
                 {
-                    if (_frameBuff.getSize() != 9)
+                    if(_isEnd)
+                    {
+                        Thread.Sleep(20);
+                        continue;
+                    }
+                    int curSize = _frameBuff.getSize();
+                    if (curSize != 5)
                     {
                         Mat frame = new Mat();
                         _videoCapture.Read(frame);
@@ -181,15 +210,15 @@ namespace WpfTest
                         else
                         {
                             _isEnd = true;
-                            return;
                         }
                     }
                     else
                     {
-                        Thread.Sleep(5);
+                        Thread.Sleep(20);
                     }
                 }
             }
+            Interlocked.Increment(ref _threadEnd);
         }
 
         public int getCurFrame(ref BitmapImage image)
@@ -200,6 +229,8 @@ namespace WpfTest
             }
             else return -1;
         }
+
+        public bool isEnd() { return _isEnd; }
 
         private void convertThread()
         {
@@ -227,9 +258,10 @@ namespace WpfTest
                     curUnit.state = BitamapState.CONVERTED;
                 } else
                 {
-                    Thread.Sleep(5);
+                    Thread.Sleep(20);
                 }
             }
+            Interlocked.Increment(ref _threadEnd);
         }
 
         private void clear()
