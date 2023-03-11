@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -16,7 +17,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Video_Editor;
+using static WpfTest.VideoDecoderNative;
 using static WpfTest.Utils;
+using System.Text;
 
 namespace WpfTest
 {
@@ -37,7 +40,9 @@ namespace WpfTest
         private VideoCapture _captureForPlay;
         private VideoCapture _playerCapture;
         object mut = new object();
+        object mut2 = new object();
         Queue<BitmapImage> _framesQueue = new Queue<BitmapImage>();
+        Queue<Mat> _matQueue = new Queue<Mat>();
         DispatcherTimer _timer = new DispatcherTimer();
         DispatcherTimer _player= new DispatcherTimer();
         BitmapImage _firstImage = new BitmapImage();
@@ -49,7 +54,7 @@ namespace WpfTest
         private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 5 };
         private string _videoFile = "";
         private bool _threadClose = false;
-
+        private VideoDecoderNative _decoder = new VideoDecoderNative();
         private long _prevWatch = -1;
         Stopwatch stopwatch;
 
@@ -157,7 +162,11 @@ namespace WpfTest
                     mediaInputTimeline.Visibility = Visibility.Hidden;
                     mediaEditTimeline.Visibility = Visibility.Visible;
 
-                    new Thread(new ThreadStart(PlayVideo)).Start();
+                    //new Thread(new ThreadStart(PlayVideo)).Start();
+                    //new Thread(new ThreadStart(ConvertMat)).Start();
+                    //new Thread(new ThreadStart(ConvertMat)).Start();
+                    _decoder.setUrl(_videoFile);
+                    _decoder.start();
                     ShowPlayed();
                 };
             }
@@ -196,14 +205,17 @@ namespace WpfTest
                     return -1;
                 else
                 {
-                    BitmapImage shot = new BitmapImage();
-                    if (GetFrame(_playerCapture, -1, shot, false) == 0) {
-                        shot.Freeze();
-                        lock(mut)
+                    Mat _image = new Mat();
+                    _playerCapture.Read(_image);
+                    if(_image.Empty())
+                    {
+                        return -1;
+                    } else
+                    {
+                        lock (mut2)
                         {
-                            _framesQueue.Enqueue(shot);
+                            _matQueue.Enqueue(_image);
                         }
-                        return 0;
                     }
                 }
             }
@@ -251,6 +263,44 @@ namespace WpfTest
             }));
         }
 
+        private void ConvertMat()
+        {
+            while (true)
+            {
+                if (_threadClose) return;
+                if (_run)
+                {
+                    Mat image = new Mat();
+                    lock (mut2)
+                    {
+                        if (_matQueue.Count != 0)
+                            image = _matQueue.Dequeue();
+                    }
+                    if (!image.Empty())
+                    {
+                        BitmapImage bm = new BitmapImage();
+                        bm.BeginInit();
+                        bm.StreamSource = image.ToMemoryStream();
+                        bm.CacheOption = BitmapCacheOption.OnLoad;
+                        bm.EndInit();
+                        bm.Freeze();
+                        lock (mut)
+                        {
+                            _framesQueue.Enqueue(bm);
+                        }
+                    }
+                    else
+                    {
+                        Thread.Sleep(5);
+                    }
+                }
+                else
+                {
+                    Thread.Sleep(5);
+                }
+            }
+        }
+
         private int GetFrame(VideoCapture capture, int pos, BitmapImage bitmapimage, bool isFirst)
         {
             if(pos != -1)
@@ -259,7 +309,7 @@ namespace WpfTest
             capture.Read(_image);
             if (_image.Empty()) return -1;
             bitmapimage.BeginInit();
-            if (isFirst) 
+            if (isFirst)
                 bitmapimage.StreamSource = _image.Resize(new OpenCvSharp.Size(_clipWidth, 50)).ToMemoryStream();
             else 
                 bitmapimage.StreamSource = _image.ToMemoryStream();
