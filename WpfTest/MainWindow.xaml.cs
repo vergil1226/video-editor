@@ -21,6 +21,7 @@ using static WpfTest.VideoDecoderNative;
 using static WpfTest.Utils;
 using System.Text;
 using System.Drawing.Drawing2D;
+using System.Windows.Forms;
 
 namespace WpfTest
 {
@@ -134,7 +135,7 @@ namespace WpfTest
                             mi = i;
                         }
                     }
-                    ZoomSlider.Value = Math.Min(mi + 1, 9);
+                    ZoomSlider.Value = Math.Min(mi + 2, 9);
 
                     BitmapImage _First = new BitmapImage();
                     GetFrame(_captureForPlay, 0, _First, true);
@@ -287,15 +288,15 @@ namespace WpfTest
             {
                 _run = false;
                 Player.Stop();
-                _seekTime = 0;
+                _seekTime = 0.0;
                 Play.Source = new BitmapImage(new Uri(@"/WpfTest;component/Resources/me_play.png", UriKind.Relative));
             }
 
             double sec = _curSec;
-
             TimeSlider.Value = _curSec;
             Text1.Text = GetFormatTime(sec);
             CutLabel.Content = GetFormatTime(sec);
+            
 
             if (CutButton.IsMouseCaptured) return;
 
@@ -586,11 +587,13 @@ namespace WpfTest
             }
         }
 
+        private double _lastZoomValue = -1;
         private async void ZoomOut(object sender, RoutedEventArgs e)
         {
             if (ZoomSlider.Value == ZoomSlider.Minimum) return;
             double zoomRate = ZoomSlider.Value - 1;
             if (zoomRate < ZoomSlider.Minimum) zoomRate = ZoomSlider.Minimum;
+            _lastZoomValue = ZoomSlider.Value;
             ZoomSlider.Value = zoomRate;
             await SetTimeLinePosition(1);
         }
@@ -600,8 +603,46 @@ namespace WpfTest
             if (ZoomSlider.Value == ZoomSlider.Maximum) return;
             double zoomRate = ZoomSlider.Value + 1;
             if (zoomRate > ZoomSlider.Maximum) zoomRate = ZoomSlider.Maximum;
+            _lastZoomValue = ZoomSlider.Value;
             ZoomSlider.Value = zoomRate;
             await SetTimeLinePosition(-1);
+        }
+
+        private async void SliderValueChange(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            double newValue = Math.Round(e.NewValue, 0);
+            if(Math.Round(e.OldValue, 0) != newValue)
+            {
+                if (_lastZoomValue == -1)
+                    _lastZoomValue = e.OldValue;
+                ZoomSlider.Value = newValue;
+                if (TimeLineScroll != null)
+                {
+                    int dif = (int)(Math.Round(_lastZoomValue - ZoomSlider.Value, 0));
+                    _lastZoomValue = -1;
+                    await SetTimeLinePosition(dif);
+                }
+            } else
+            {
+                if(ZoomSlider.Value != Math.Round(e.OldValue, 0))
+                    ZoomSlider.Value = Math.Round(e.OldValue, 0);
+            }
+        }
+
+        private async void SliderPreviewClick(object sender, MouseButtonEventArgs e)
+        {
+            //if (((Slider)sender).SelectionEnd != Math.Round(e.NewValue, 0))
+            //{
+            //  ((Slider)sender).SelectionEnd = Math.Round(e.NewValue, 0);
+            var mousePosition = e.GetPosition(ZoomSlider);
+            double newValue = Math.Round((mousePosition.X - 5) / (ZoomSlider.Width - 10) * 9, 0);
+            if(ZoomSlider.Value != newValue)
+            {
+                double dif = ZoomSlider.Value - newValue;
+                ZoomSlider.Value = newValue;
+                await SetTimeLinePosition((int)Math.Round(Math.Round(dif), 0));
+            }
+            //}
         }
 
         private async Task SetTimeLinePosition(int s)
@@ -724,7 +765,7 @@ namespace WpfTest
             TimeSlider.CaptureMouse();
         }
 
-        private void OnTimeSliderMouseMove(object sender, MouseEventArgs e)
+        private void OnTimeSliderMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
         {
             if (TimeSlider.IsMouseCaptured)
             {
@@ -859,10 +900,10 @@ namespace WpfTest
                 return;
                 //sec = _duration;
             }
-            CutButton.RenderTransform = new TranslateTransform(x, 0);
-            CutLine.RenderTransform = new TranslateTransform(x, 0);
-            CutLabel.RenderTransform = new TranslateTransform(x, 0);
-            CutLabel.Content = GetFormatTime(sec);
+            //CutButton.RenderTransform = new TranslateTransform(x, 0);
+            //CutLine.RenderTransform = new TranslateTransform(x, 0);
+            //CutLabel.RenderTransform = new TranslateTransform(x, 0);
+            //CutLabel.Content = GetFormatTime(sec);
             _seekTime = sec;
         }
 

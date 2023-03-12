@@ -569,7 +569,8 @@
                                     </StackPanel>
                                 </Button>
                                 <Slider Name="ZoomSlider" Background="Transparent" Margin="0,7,0,0"
-                                    Width="100" Foreground="#FFFFFF" BorderThickness="0" SmallChange="0" Value="4" IsEnabled="False" Maximum="9" />
+                                    Width="100" Foreground="#FFFFFF" BorderThickness="0" SmallChange="0" Value="4" IsEnabled="True" 
+                                         IsMoveToPointEnabled="True" Maximum="9" ValueChanged="SliderValueChange"/>
                                 <Button Width="30" Height="30" Background="Transparent" BorderThickness="0" Click="ZoomIn">
                                     <StackPanel>
                                         <Image Source="{svgc:SvgImage Source=/Resources/zoomin.svg}" Width="15" />
