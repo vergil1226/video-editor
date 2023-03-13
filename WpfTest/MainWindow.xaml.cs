@@ -135,13 +135,14 @@ namespace WpfTest
                             mi = i;
                         }
                     }
-                    ZoomSlider.Value = Math.Min(mi + 2, 9);
+
 
                     BitmapImage _First = new BitmapImage();
                     GetFrame(_captureForPlay, 0, _First, true);
                     _firstImage = _First;
                     InitWidth();
                     await ConvertLoad();
+                    ZoomSlider.Value = Math.Min(mi + 2, 9);
                     BgGrid.Children.Clear();
 
                     stopwatch = new Stopwatch();
@@ -509,6 +510,7 @@ namespace WpfTest
                 waveFormSize = waveFormData.Length;
 
                 VideoClipControl clip = new VideoClipControl(_capture, _firstImage, 0, _duration, _clipWidth, _timeIntervals[(int)ZoomSlider.Value], WaveFormData, waveFormSize, maxSpan);
+                await clip.Init(_timeIntervals.Min());
                 VideoClips.Add(clip);
                 ClipStack.Children.Add(clip);
             }
@@ -822,7 +824,7 @@ namespace WpfTest
                     var _endPos = VideoClips[i]._endPos[VideoClips[i]._endPos.Count - 1];
 
                     VideoClips[i].UpdateEndPos(_startPos);
-                    var clip = new VideoClipControl(_capture, _firstImage, _startPos, _endPos, _clipWidth, _timeIntervals[(int)(ZoomSlider.Value)], WaveFormData, waveFormSize, maxSpan);
+                    var clip = new VideoClipControl(_capture, _firstImage, _startPos, _endPos, _clipWidth, _timeIntervals[(int)(ZoomSlider.Value)], WaveFormData, waveFormSize, maxSpan, VideoClips[0]._buffer, VideoClips[0]._bufferPos);
                     clip.isMute = VideoClips[i].isMute;
                     clip.MuteMask.Visibility = clip.isMute ? Visibility.Visible : Visibility.Collapsed;
                     ClipStack.Children.Insert(i + 1, clip);
