@@ -48,7 +48,11 @@ namespace WpfTest
         private bool _run = false, _fullscreen = false, _altPressed = false, _mute = false, _maximize = false, _mediaLoaded = false;
         private double _clipWidth, _cutlinePosX, _duration, _curDuraiton, _curSec = 0.0, _seekTime = -1.0;
         private System.Windows.Point _positionInBlock;
+<<<<<<< HEAD
         private double[] _timeIntervals = new double[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 5 };
+=======
+        private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 10 };
+>>>>>>> 1dc0f05a0e54dfed78eee53fa84492f8dd9a4f34
         private string _videoFile = "";
         private bool _threadClose = false;
         private VideoDecoderNative _decoder = new VideoDecoderNative();
@@ -150,6 +154,14 @@ namespace WpfTest
                     InitWidth();
 
                     await ConvertLoad();
+<<<<<<< HEAD
+=======
+                    if(WindowState == WindowState.Maximized)
+                        ZoomSlider.Value = Math.Min(mi + 3, 9);
+                    else
+                        ZoomSlider.Value = Math.Min(mi + 2, 9);
+                    BgGrid.Children.Clear();
+>>>>>>> 1dc0f05a0e54dfed78eee53fa84492f8dd9a4f34
 
                     stopwatch = new Stopwatch();
                     BitmapImage _first = new BitmapImage();
