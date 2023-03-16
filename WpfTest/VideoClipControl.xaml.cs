@@ -32,7 +32,7 @@ namespace WpfTest
     {
         private VideoCapture _capture;
         public double _clipWidth;
-        private int _timeInterval;
+        private double _timeInterval;
         private BitmapImage _firstImage;
 
         public List<double> _startPos { get; private set; }
@@ -53,7 +53,7 @@ namespace WpfTest
         public bool isMute = false;
 
         public VideoClipControl(VideoCapture capture, BitmapImage firstImage, double startPos, double endPos, double clipWidth,
-            int timeInterval, List<float> _WaveFormData, int _waveFormSize, double _maxSpan,
+            double timeInterval, List<float> _WaveFormData, int _waveFormSize, double _maxSpan,
             List<BitmapImage> buffer = null, List<int> bufferPos = null)
         {
             InitializeComponent();
@@ -192,7 +192,7 @@ namespace WpfTest
             await Task.Delay(5);
         }
 
-        public async Task SetTimeInterval(int interval) {
+        public async Task SetTimeInterval(double interval) {
             _timeInterval = interval;
             initID++;
             await InitClip(initID);

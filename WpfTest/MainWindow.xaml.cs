@@ -48,7 +48,7 @@ namespace WpfTest
         private bool _run = false, _fullscreen = false, _altPressed = false, _mute = false, _maximize = false, _mediaLoaded = false;
         private double _clipWidth, _cutlinePosX, _duration, _curDuraiton, _curSec = 0.0, _seekTime = -1.0;
         private System.Windows.Point _positionInBlock;
-        private int[] _timeIntervals = new int[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 5 };
+        private double[] _timeIntervals = new double[10] { 7200, 3600, 1200, 600, 300, 120, 60, 30, 20, 5 };
         private string _videoFile = "";
         private bool _threadClose = false;
         private VideoDecoderNative _decoder = new VideoDecoderNative();
@@ -127,13 +127,20 @@ namespace WpfTest
                     TimeSlider.Minimum = 0;
                     TimeSlider.Maximum = _duration;
 
-                    int mi = 0;
+                    /*int mi = 0;
                     for (int i = 1; i < 10; i++)
                     {
                         if (Math.Abs(_timeIntervals[mi] - _duration) > Math.Abs(_timeIntervals[i] - _duration))
                         {
                             mi = i;
                         }
+                    }*/
+                    _timeIntervals[0] = _duration / 5.2;
+                    ZoomSlider.Value = 0;
+                    for (int i = 1; i < 10; i++)
+                    {
+                        _timeIntervals[i] = _timeIntervals[i - 1] / 2.0;
+                        if (_timeIntervals[i] < 5) _timeIntervals[i] = 5;
                     }
 
 
@@ -142,7 +149,7 @@ namespace WpfTest
                     _firstImage = _First;
                     InitWidth();
                     await ConvertLoad();
-                    ZoomSlider.Value = Math.Min(mi + 2, 9);
+
                     BgGrid.Children.Clear();
 
                     stopwatch = new Stopwatch();
@@ -343,7 +350,8 @@ namespace WpfTest
         private void InitWidth()
         {
             double _width = 200.0 / _timeIntervals[(int)ZoomSlider.Value] * _curDuraiton;
-            LineControl.Width = ((int)(_width / TimeLineScroll.ActualWidth) + 1) * TimeLineScroll.ActualWidth;
+            //LineControl.Width = ((int)(_width / TimeLineScroll.ActualWidth)) * TimeLineScroll.ActualWidth;
+            LineControl.Width = _width;
             ClipScroll.Width = LineScroll.Width;
             TimeScroll.Width = LineControl.Width;
 
