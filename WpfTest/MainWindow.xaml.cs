@@ -140,7 +140,7 @@ namespace WpfTest
                     for (int i = 1; i < 10; i++)
                     {
                         _timeIntervals[i] = _timeIntervals[i - 1] / 2.0;
-                        if (_timeIntervals[i] < 5) _timeIntervals[i] = 5;
+                        if (_timeIntervals[i] < 2.5) _timeIntervals[i] = 2.5;
                     }
 
 
@@ -148,26 +148,27 @@ namespace WpfTest
                     GetFrame(_captureForPlay, 0, _First, true);
                     _firstImage = _First;
                     InitWidth();
-                    await ConvertLoad();
 
-                    BgGrid.Children.Clear();
+                    await ConvertLoad();
 
                     stopwatch = new Stopwatch();
                     BitmapImage _first = new BitmapImage();
                     GetFrame(_captureForPlay, 0, _first, false);
                     VideoShow.Source = _first;
 
+                    _decoder.stop();
+                    _decoder.setUrl(_videoFile);
+                    _decoder.start();
+                    _threadClose = false;
+                    new Thread(new ThreadStart(ShowPlayed)).Start();
+
+                    BgGrid.Children.Clear();
                     m_toolbar.Visibility = Visibility.Hidden;
                     mediaEditWindow.Visibility = Visibility.Visible;
                     mediaInputWindow.Visibility = Visibility.Hidden;
 
                     mediaInputTimeline.Visibility = Visibility.Hidden;
                     mediaEditTimeline.Visibility = Visibility.Visible;
-                    _decoder.stop();
-                    _decoder.setUrl(_videoFile);
-                    _decoder.start();
-                    _threadClose = false;
-                    new Thread(new ThreadStart(ShowPlayed)).Start();
                 };
             }
         }
@@ -518,7 +519,8 @@ namespace WpfTest
                 waveFormSize = waveFormData.Length;
 
                 VideoClipControl clip = new VideoClipControl(_capture, _firstImage, 0, _duration, _clipWidth, _timeIntervals[(int)ZoomSlider.Value], WaveFormData, waveFormSize, maxSpan);
-                await clip.Init(_timeIntervals.Min());
+                //await clip.Init(_timeIntervals.Min());
+                await clip.Init(_timeIntervals[(int)(ZoomSlider.Value)]);
                 VideoClips.Add(clip);
                 ClipStack.Children.Add(clip);
             }
